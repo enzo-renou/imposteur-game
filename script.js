@@ -86,7 +86,6 @@ socket.on('updatePlayerList', (playersList) => {
     const list = document.getElementById('players-list');
     const me = playersList.find(p => p.id === socket.id);
     
-    // GESTION UI ADMIN
     const startBtn = document.getElementById('start-btn');
     const waitingMsg = document.getElementById('waiting-msg');
 
@@ -113,6 +112,7 @@ socket.on('gameStarted', (data) => {
     resetUI();
     switchScreen('game-screen');
     document.getElementById('role-display').innerText = data.word;
+    document.getElementById('emergency-container').classList.add('hidden'); // Caché au début
     updateTurnUI(data.currentPlayer);
 });
 
@@ -135,19 +135,55 @@ function updateTurnUI(currentPlayerName) {
     }
 }
 
-// --- FIN CYCLE / VOTE ---
-socket.on('roundFinished', (data) => {
-    if (isDead) {
-        document.getElementById('turn-info').innerText = "Fin du cycle. Les vivants délibèrent...";
-        return; 
+// --- NOUVEAU CYCLE (Indices) ---
+socket.on('startNewCycle', (data) => {
+    switchScreen('game-screen');
+    
+    if(data.message) {
+         const msg = document.getElementById('game-message'); 
+         msg.innerText = data.message; msg.classList.remove('hidden'); 
+         setTimeout(() => msg.classList.add('hidden'), 4000);
     }
-    document.getElementById('turn-info').innerText = "Tour terminé !";
-    document.getElementById('decide-count').innerText = "0/" + data.total;
-    document.getElementById('vote-section').classList.remove('hidden');
-    document.getElementById('btn-more').disabled = false;
-    setTimeout(() => { document.getElementById('vote-section').scrollIntoView({behavior: "smooth"}); }, 100);
+    
+    updateTurnUI(data.nextPlayer);
+
+    // GESTION BOUTON URGENCE
+    const emerContainer = document.getElementById('emergency-container');
+    const emerCount = document.getElementById('emergency-count');
+    const emerNeeded = document.getElementById('emergency-needed');
+    
+    // Reset visuel du bouton
+    emerCount.innerText = "0";
+    document.getElementById('emergency-btn').disabled = false;
+    
+    if (data.showEmergency && !isDead) {
+        emerContainer.classList.remove('hidden');
+        emerNeeded.innerText = data.emergencyThreshold;
+    } else {
+        emerContainer.classList.add('hidden');
+    }
 });
 
+// --- PHASE DE DÉCISION (Fin de tour) ---
+socket.on('decisionPhaseStarted', (data) => {
+    if (isDead) {
+        document.getElementById('turn-info').innerText = "Fin du tour. Les vivants décident...";
+        return; 
+    }
+    switchScreen('decision-screen');
+    document.getElementById('decision-choices').classList.remove('hidden');
+    document.getElementById('decision-wait-msg').classList.add('hidden');
+    document.getElementById('timer-display-decision').innerText = data.timer;
+});
+
+function makeDecision(choice) {
+    // choice = 'vote' ou 'cycle'
+    document.getElementById('decision-choices').classList.add('hidden');
+    document.getElementById('decision-wait-msg').classList.remove('hidden');
+    socket.emit('submitDecision', choice);
+}
+
+// --- PHASE DE VOTE (Élimination) ---
 socket.on('votingStarted', (data) => {
     switchScreen('voting-screen');
     document.getElementById('vote-confirmation').classList.add('hidden');
@@ -176,7 +212,7 @@ socket.on('votingStarted', (data) => {
 // --- RÉSULTATS ---
 socket.on('gameResult', (data) => {
     switchScreen('game-screen');
-    document.getElementById('vote-section').classList.add('hidden');
+    document.getElementById('emergency-container').classList.add('hidden');
     
     const roleCard = document.getElementById('role-card');
     const turnInfo = document.getElementById('turn-info');
@@ -184,7 +220,6 @@ socket.on('gameResult', (data) => {
     roleCard.style.borderBottomColor = data.success ? "var(--secondary-color)" : "var(--danger-color)";
     document.getElementById('role-display').innerText = data.success ? "🎉 VICTOIRE !" : "💀 DÉFAITE...";
     
-    // --- CONFETTIS ---
     if (data.success) {
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
     }
@@ -203,13 +238,12 @@ socket.on('gameResult', (data) => {
 
 // --- UTILITAIRES ---
 function switchScreen(screenId) {
-    ['home-screen', 'pseudo-screen', 'lobby', 'game-screen', 'voting-screen'].forEach(id => {
+    ['home-screen', 'pseudo-screen', 'lobby', 'game-screen', 'voting-screen', 'decision-screen'].forEach(id => {
         document.getElementById(id).classList.add('hidden');
     });
     document.getElementById(screenId).classList.remove('hidden');
 }
 
-// Fonction toggle Modal
 function toggleRules() {
     const modal = document.getElementById('rules-modal');
     modal.classList.toggle('hidden');
@@ -223,33 +257,43 @@ socket.on('youAreDead', () => {
     document.getElementById('role-display').innerText = "👻 ÉLIMINÉ";
     document.getElementById('role-display').classList.add('dead-text');
     document.getElementById('next-btn').classList.add('hidden');
-    document.getElementById('vote-section').classList.add('hidden');
+    document.getElementById('emergency-container').classList.add('hidden');
+    document.getElementById('decision-choices').classList.add('hidden');
+});
+
+// --- GESTION URGENCE ---
+function clickEmergency() {
+    if (isDead) return;
+    document.getElementById('emergency-btn').disabled = true;
+    socket.emit('triggerEmergency');
+}
+
+socket.on('updateEmergencyState', (data) => {
+    document.getElementById('emergency-count').innerText = data.count;
+    document.getElementById('emergency-needed').innerText = data.required;
 });
 
 // Fonctions sockets
-function startGame() { 
-    socket.emit('startGame'); // Retour à l'appel simple sans arguments
-}
-
+function startGame() { socket.emit('startGame'); }
 function passTurn() { document.getElementById('next-btn').classList.add('hidden'); socket.emit('nextTurn'); }
-function moreIndices() { if(isDead) return; document.getElementById('btn-more').disabled = true; socket.emit('requestMoreIndices'); }
-function requestVote() { if(isDead) return; socket.emit('requestVotePhase'); }
+
 function submitVote(targetName) { 
     document.getElementById('candidates-list').innerHTML = ""; 
     document.getElementById('vote-confirmation').classList.remove('hidden'); 
     socket.emit('castVote', targetName); 
 }
 
-socket.on('updateDecisionCount', (data) => document.getElementById('decide-count').innerText = `${data.count}/${data.total}`);
-
 socket.on('timerUpdate', (time) => {
-    const display = document.getElementById('timer-display');
-    display.innerText = time;
-    if(time <= 5) {
-        display.style.color = "red";
-    } else {
-        display.style.color = "var(--primary-color)";
-    }
+    // Met à jour tous les compteurs visuels de la page (vote ou décision)
+    const displayVote = document.getElementById('timer-display');
+    const displayDecision = document.getElementById('timer-display-decision');
+    
+    if(displayVote) displayVote.innerText = time;
+    if(displayDecision) displayDecision.innerText = time;
+    
+    const color = time <= 5 ? "red" : "var(--primary-color)";
+    if(displayVote) displayVote.style.color = color;
+    if(displayDecision) displayDecision.style.color = color;
 });
 
 socket.on('error', (msg) => alert(msg));
@@ -261,14 +305,3 @@ function resetUI() {
     document.getElementById('role-display').classList.remove('dead-text');
     document.getElementById('role-card').style.borderBottomColor = "var(--primary-color)";
 }
-
-socket.on('startNewCycle', (data) => {
-    switchScreen('game-screen');
-    document.getElementById('vote-section').classList.add('hidden');
-    if(data.message) {
-         const msg = document.getElementById('game-message'); 
-         msg.innerText = data.message; msg.classList.remove('hidden'); 
-         setTimeout(() => msg.classList.add('hidden'), 3000);
-    }
-    updateTurnUI(data.nextPlayer);
-});

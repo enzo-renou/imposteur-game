@@ -82,7 +82,6 @@
         .continue-btn { background-color: var(--secondary-color); box-shadow: 0 6px 0 var(--secondary-dark); }
         .or-divider { margin: 20px 0; color: #999; font-weight: bold; }
 
-        /* Avatars */
         #avatar-grid {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
             margin: 20px 0; justify-items: center;
@@ -97,7 +96,6 @@
             transform: scale(1.1); background-color: #e0d4fc;
         }
 
-        /* Lobby */
         #room-code-display {
             font-size: 1.5em; font-weight: 700; color: var(--primary-color);
             margin: 20px 0; padding: 15px; background: #eef2ff;
@@ -107,7 +105,6 @@
         .player-card { display: flex; flex-direction: column; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 12px; }
         .player-card img { width: 50px; height: 50px; border-radius: 50%; margin-bottom: 5px; object-fit: cover; }
         
-        /* Jeu */
         #role-card {
             background: white; padding: 30px; border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin: 20px 0;
@@ -123,7 +120,33 @@
 
         .candidate-btn { display: flex; align-items: center; justify-content: center; font-size: 14px; padding: 10px; }
 
-        /* --- BOUTON AIDE & MODAL --- */
+        /* --- DECISION SCREEN --- */
+        #decision-choices {
+            display: flex; gap: 10px; flex-direction: column;
+            margin-top: 20px;
+        }
+        .big-choice-btn {
+            height: 80px; font-size: 1.2em; display: flex;
+            align-items: center; justify-content: center;
+        }
+
+        /* --- EMERGENCY BUTTON --- */
+        #emergency-container {
+            margin-top: 30px;
+            border-top: 2px dashed #ddd;
+            padding-top: 20px;
+        }
+        #emergency-btn {
+            background-color: var(--danger-color);
+            box-shadow: 0 6px 0 var(--danger-dark);
+            font-size: 1.1em;
+        }
+        #emergency-btn:active {
+            background-color: var(--danger-dark);
+            box-shadow: 0 2px 0 #990000;
+        }
+
+        /* --- HELP & MODAL --- */
         #help-btn {
             position: fixed; top: 20px; right: 20px;
             width: 40px; height: 40px; border-radius: 50%;
@@ -167,24 +190,24 @@
             
             <div class="rule-item">
                 <span class="rule-role">🧑‍🌾 Les Citoyens :</span><br>
-                Vous avez tous le même mot (ex: "Pizza"). Votre but : démasquer l'Imposteur.
+                Mot commun (ex: "Pizza"). Démasquez l'Imposteur.
             </div>
-            
             <div class="rule-item">
                 <span class="rule-role">🕵️ L'Imposteur :</span><br>
-                Vous avez un mot légèrement différent (ex: "Burger"). Votre but : vous fondre dans la masse sans vous faire repérer.
+                Mot différent (ex: "Burger"). Fondez-vous dans la masse.
             </div>
-
             <div class="rule-item">
-                <span class="rule-role">👻 M. Blanc (Dès 5 joueurs) :</span><br>
-                Vous n'avez <strong>AUCUN mot</strong> ! Vous devez écouter et bluffer pour faire croire que vous savez de quoi on parle.
+                <span class="rule-role">👻 M. Blanc (5+ Joueurs) :</span><br>
+                AUCUN mot. Bluffez !
             </div>
-
             <hr style="border:0; border-top:1px dashed #ccc; margin:15px 0;">
-
             <div class="rule-item">
-                <strong>⚠️ Spécial 6+ Joueurs :</strong><br>
-                Il y a <strong>2 Imposteurs</strong> ! Pour gagner, les citoyens doivent éliminer LES DEUX imposteurs.
+                <strong>🚨 Phase de Décision :</strong><br>
+                Après un tour, votez pour <em>Éjecter</em> ou <em>Refaire un tour</em>. Majorité absolue requise.
+            </div>
+            <div class="rule-item">
+                <strong>🔔 Bouton Urgence :</strong><br>
+                Après le 1er tour, forcez le vote à tout moment si plus de 50% des joueurs cliquent.
             </div>
         </div>
     </div>
@@ -225,14 +248,26 @@
             <div id="role-card">
                 <h2 id="role-display">Ton mot : ???</h2>
             </div>
+            
             <p id="turn-info">Préparation...</p>
             <button id="next-btn" class="hidden continue-btn" onclick="passTurn()">J'ai donné mon indice (Suivant)</button>
-            <div id="vote-section" class="hidden">
-                <hr style="border:none; border-top: 2px dashed #eee; margin: 20px 0;">
-                <p><strong>Fin du tour ! On fait quoi ?</strong></p>
-                <button id="btn-more" class="secondary-btn" onclick="moreIndices()">Refaire un tour (<span id="decide-count">0</span>)</button>
-                <button class="vote-btn" onclick="requestVote()">🚨 Voter contre l'imposteur !</button>
+            
+            <div id="emergency-container" class="hidden">
+                <button id="emergency-btn" onclick="clickEmergency()">
+                    🚨 FORCER LE VOTE (<span id="emergency-count">0</span>/<span id="emergency-needed">?</span>)
+                </button>
             </div>
+        </div>
+
+        <div id="decision-screen" class="hidden">
+            <h2>⏱️ C'est l'heure du choix !</h2>
+            <div id="timer-display-decision" style="font-size:3em; font-weight:800; color:var(--primary-color);">30</div>
+            
+            <div id="decision-choices">
+                <button class="vote-btn big-choice-btn" onclick="makeDecision('vote')">🚨 PASSER AU VOTE</button>
+                <button class="continue-btn big-choice-btn" onclick="makeDecision('cycle')">🔄 REFAIRE UN TOUR</button>
+            </div>
+            <p id="decision-wait-msg" class="hidden" style="color:#999; font-style:italic;">Choix enregistré. Attente des autres...</p>
         </div>
 
         <div id="voting-screen" class="hidden">

@@ -11,226 +11,22 @@ const games = {};
 
 // Liste des mots
 const wordPairs = [
-    // --- NOURRITURE & BOISSONS ---
     { normal: "Sable", imposteur: "Gravier" },
-    { normal: "Pizza", imposteur: "Burger" },
-    { normal: "Banane", imposteur: "Pomme" },
-    { normal: "Thé", imposteur: "Café" },
-    { normal: "Chocolat", imposteur: "Vanille" },
-    { normal: "Crêpe", imposteur: "Gaufre" },
-    { normal: "Ketchup", imposteur: "Mayonnaise" },
-    { normal: "Pâtes", imposteur: "Riz" },
-    { normal: "Pain", imposteur: "Brioche" },
-    { normal: "Eau", imposteur: "Soda" },
-    { normal: "Vin", imposteur: "Bière" },
-    { normal: "Fraise", imposteur: "Framboise" },
-    { normal: "Orange", imposteur: "Clémentine" },
-    { normal: "Sel", imposteur: "Poivre" },
-    { normal: "Sucre", imposteur: "Farine" },
-    { normal: "Sushi", imposteur: "Maki" },
-    { normal: "Salade", imposteur: "Épinard" },
-    { normal: "Yaourt", imposteur: "Fromage blanc" },
-    { normal: "Poulet", imposteur: "Dinde" },
-    { normal: "Saumon", imposteur: "Thon" },
-    { normal: "Chips", imposteur: "Pop-corn" },
-    { normal: "Miel", imposteur: "Confiture" },
-    { normal: "Lait", imposteur: "Crème" },
-    { normal: "Oignon", imposteur: "Ail" },
-    { normal: "Citron", imposteur: "Pamplemousse" },
-    { normal: "Baguette", imposteur: "Croissant" },
-    { normal: "Tacos", imposteur: "Kebab" },
-    { normal: "Soupe", imposteur: "Bouillon" },
-    { normal: "Cookie", imposteur: "Brownie" },
-    { normal: "Melon", imposteur: "Pastèque" },
-    { normal: "Champagne", imposteur: "Cidre" },
-    { normal: "Oeuf", imposteur: "Omelette" },
-
-    // --- ANIMAUX ---
     { normal: "Lion", imposteur: "Tigre" },
-    { normal: "Chien", imposteur: "Loup" },
-    { normal: "Chat", imposteur: "Renard" },
-    { normal: "Cheval", imposteur: "Âne" },
-    { normal: "Aigle", imposteur: "Faucon" },
-    { normal: "Requin", imposteur: "Dauphin" },
-    { normal: "Abeille", imposteur: "Guêpe" },
-    { normal: "Mouche", imposteur: "Moustique" },
-    { normal: "Grenouille", imposteur: "Crapaud" },
-    { normal: "Poule", imposteur: "Canard" },
-    { normal: "Vache", imposteur: "Taureau" },
-    { normal: "Mouton", imposteur: "Chèvre" },
-    { normal: "Souris", imposteur: "Rat" },
-    { normal: "Lapin", imposteur: "Lièvre" },
-    { normal: "Serpent", imposteur: "Lézard" },
-    { normal: "Papillon", imposteur: "Libellule" },
-    { normal: "Ours", imposteur: "Panda" },
-    { normal: "Pingouin", imposteur: "Manchot" },
-    { normal: "Gorille", imposteur: "Chimpanzé" },
-    { normal: "Crocodile", imposteur: "Alligator" },
-    { normal: "Chameau", imposteur: "Dromadaire" },
-    { normal: "Fourmi", imposteur: "Araignée" },
-    { normal: "Hibou", imposteur: "Chouette" },
-
-    // --- OBJETS & MAISON ---
-    { normal: "Stylo", imposteur: "Crayon" },
-    { normal: "Chaise", imposteur: "Tabouret" },
-    { normal: "Table", imposteur: "Bureau" },
-    { normal: "Lit", imposteur: "Canapé" },
-    { normal: "Fourchette", imposteur: "Cuillère" },
-    { normal: "Assiette", imposteur: "Bol" },
-    { normal: "Verre", imposteur: "Tasse" },
-    { normal: "Lampe", imposteur: "Ampoule" },
-    { normal: "Porte", imposteur: "Fenêtre" },
-    { normal: "Clé", imposteur: "Serrure" },
-    { normal: "Tapis", imposteur: "Moquette" },
-    { normal: "Miroir", imposteur: "Vitre" },
-    { normal: "Savon", imposteur: "Shampoing" },
-    { normal: "Brosse à dents", imposteur: "Dentifrice" },
-    { normal: "Serviette", imposteur: "Gant" },
-    { normal: "Oreiller", imposteur: "Coussin" },
-    { normal: "Couette", imposteur: "Couverture" },
-    { normal: "Livre", imposteur: "Magazine" },
-    { normal: "Cahier", imposteur: "Feuille" },
-    { normal: "Ciseaux", imposteur: "Couteau" },
-    { normal: "Marteau", imposteur: "Tournevis" },
-    { normal: "Scie", imposteur: "Hache" },
-    { normal: "Valise", imposteur: "Sac à dos" },
-    { normal: "Parapluie", imposteur: "Imperméable" },
-    { normal: "Montre", imposteur: "Horloge" },
-    { normal: "Bague", imposteur: "Bracelet" },
-    { normal: "Collier", imposteur: "Écharpe" },
-
-    // --- VÊTEMENTS ---
-    { normal: "Pantalon", imposteur: "Short" },
-    { normal: "T-shirt", imposteur: "Chemise" },
-    { normal: "Pull", imposteur: "Sweat" },
-    { normal: "Manteau", imposteur: "Veste" },
-    { normal: "Chaussette", imposteur: "Chaussure" },
-    { normal: "Botte", imposteur: "Basket" },
-    { normal: "Chapeau", imposteur: "Casquette" },
-    { normal: "Gants", imposteur: "Moufles" },
-    { normal: "Ceinture", imposteur: "Bretelles" },
-    { normal: "Pyjama", imposteur: "Robe de chambre" },
-    { normal: "Maillot de bain", imposteur: "Sous-vêtement" },
-    { normal: "Lunettes", imposteur: "Lentilles" },
-
-    // --- LIEUX & TRANSPORTS ---
     { normal: "Avion", imposteur: "Hélicoptère" },
-    { normal: "Voiture", imposteur: "Camion" },
-    { normal: "Océan", imposteur: "Lac" },
-    { normal: "Train", imposteur: "Métro" },
-    { normal: "Bus", imposteur: "Tramway" },
-    { normal: "Vélo", imposteur: "Moto" },
-    { normal: "Bateau", imposteur: "Paquebot" },
-    { normal: "École", imposteur: "Collège" },
-    { normal: "Lycée", imposteur: "Université" },
-    { normal: "Cinéma", imposteur: "Théâtre" },
-    { normal: "Piscine", imposteur: "Plage" },
-    { normal: "Montagne", imposteur: "Colline" },
-    { normal: "Forêt", imposteur: "Jungle" },
-    { normal: "Rivière", imposteur: "Fleuve" },
-    { normal: "Ville", imposteur: "Village" },
-    { normal: "Maison", imposteur: "Appartement" },
-    { normal: "Chambre", imposteur: "Salon" },
-    { normal: "Cuisine", imposteur: "Salle de bain" },
-    { normal: "Pharmacie", imposteur: "Hôpital" },
-    { normal: "Boulangerie", imposteur: "Pâtisserie" },
-    { normal: "Restaurant", imposteur: "Cantine" },
-    { normal: "Parc", imposteur: "Jardin" },
-    { normal: "Pont", imposteur: "Tunnel" },
-    { normal: "Ascenseur", imposteur: "Escalier" },
-
-    // --- LOISIRS & SPORTS ---
+    { normal: "Pizza", imposteur: "Burger" },
     { normal: "Piano", imposteur: "Guitare" },
+    { normal: "Océan", imposteur: "Lac" },
+    { normal: "Chien", imposteur: "Loup" },
+    { normal: "Banane", imposteur: "Pomme" },
+    { normal: "Voiture", imposteur: "Camion" },
+    { normal: "Stylo", imposteur: "Crayon" },
+    { normal: "Thé", imposteur: "Café" },
     { normal: "Tennis", imposteur: "Ping-Pong" },
-    { normal: "Ski", imposteur: "Snowboard" },
-    { normal: "Football", imposteur: "Rugby" },
-    { normal: "Basket", imposteur: "Handball" },
-    { normal: "Natation", imposteur: "Plongée" },
-    { normal: "Danse", imposteur: "Gymnastique" },
-    { normal: "Peinture", imposteur: "Dessin" },
-    { normal: "Cinéma", imposteur: "Netflix" },
-    { normal: "Jeux vidéo", imposteur: "Jeux de société" },
-    { normal: "Violon", imposteur: "Violoncelle" },
-    { normal: "Batterie", imposteur: "Tambour" },
-    { normal: "Flûte", imposteur: "Trompette" },
-    { normal: "Judo", imposteur: "Karaté" },
-    { normal: "Boxe", imposteur: "Lutte" },
-    { normal: "Surf", imposteur: "Skate" },
-    { normal: "Échecs", imposteur: "Dames" },
-    { normal: "Carte", imposteur: "Dé" },
-
-    // --- TECHNOLOGIE ---
-    { normal: "Téléphone", imposteur: "Tablette" },
-    { normal: "Ordinateur", imposteur: "Télévision" },
-    { normal: "Clavier", imposteur: "Souris" },
-    { normal: "Facebook", imposteur: "Instagram" },
-    { normal: "Twitter", imposteur: "TikTok" },
-    { normal: "Email", imposteur: "SMS" },
-    { normal: "Wifi", imposteur: "4G" },
-    { normal: "Chargeur", imposteur: "Batterie" },
-    { normal: "Photo", imposteur: "Vidéo" },
-    { normal: "Casque", imposteur: "Écouteurs" },
-    { normal: "Google", imposteur: "Wikipedia" },
-    { normal: "Apple", imposteur: "Samsung" },
-    { normal: "PlayStation", imposteur: "Xbox" },
-
-    // --- NATURE & MÉTÉO ---
     { normal: "Soleil", imposteur: "Lune" },
-    { normal: "Pluie", imposteur: "Neige" },
-    { normal: "Nuage", imposteur: "Brouillard" },
-    { normal: "Vent", imposteur: "Tempête" },
-    { normal: "Feu", imposteur: "Fumée" },
-    { normal: "Glace", imposteur: "Eau" },
-    { normal: "Terre", imposteur: "Sable" },
-    { normal: "Pierre", imposteur: "Caillou" },
-    { normal: "Arbre", imposteur: "Buisson" },
-    { normal: "Fleur", imposteur: "Rose" },
-    { normal: "Herbe", imposteur: "Feuille" },
-    { normal: "Étoile", imposteur: "Planète" },
-    { normal: "Jour", imposteur: "Nuit" },
-    { normal: "Été", imposteur: "Hiver" },
-    { normal: "Printemps", imposteur: "Automne" },
-
-    // --- CORPS HUMAIN ---
-    { normal: "Main", imposteur: "Pied" },
-    { normal: "Doigt", imposteur: "Orteil" },
-    { normal: "Oeil", imposteur: "Oreille" },
-    { normal: "Nez", imposteur: "Bouche" },
-    { normal: "Dent", imposteur: "Langue" },
-    { normal: "Cheveux", imposteur: "Barbe" },
-    { normal: "Bras", imposteur: "Jambe" },
-    { normal: "Coude", imposteur: "Genou" },
-    { normal: "Coeur", imposteur: "Poumon" },
-    { normal: "Sang", imposteur: "Veine" },
-
-    // --- MÉTIERS ---
-    { normal: "Docteur", imposteur: "Infirmier" },
-    { normal: "Policier", imposteur: "Pompier" },
-    { normal: "Professeur", imposteur: "Élève" },
-    { normal: "Boulanger", imposteur: "Cuisinier" },
-    { normal: "Chanteur", imposteur: "Acteur" },
-    { normal: "Juge", imposteur: "Avocat" },
-    { normal: "Soldat", imposteur: "Général" },
-    { normal: "Pilote", imposteur: "Chauffeur" },
-
-    // --- CONCEPTS ABSTRAITS ---
-    { normal: "Amour", imposteur: "Amitié" },
-    { normal: "Joie", imposteur: "Bonheur" },
-    { normal: "Peur", imposteur: "Surprise" },
-    { normal: "Colère", imposteur: "Haine" },
-    { normal: "Rêve", imposteur: "Cauchemar" },
-    { normal: "Mensonge", imposteur: "Vérité" },
-    { normal: "Question", imposteur: "Réponse" },
-    { normal: "Début", imposteur: "Fin" },
-    { normal: "Guerre", imposteur: "Paix" },
-    { normal: "Travail", imposteur: "Vacances" },
-    { normal: "Mariage", imposteur: "Divorce" },
-    { normal: "Naître", imposteur: "Mourir" },
-    { normal: "Gagner", imposteur: "Perdre" },
-    { normal: "Donner", imposteur: "Recevoir" },
-    { normal: "Acheter", imposteur: "Vendre" },
-    { normal: "Parler", imposteur: "Crier" },
-    { normal: "Marcher", imposteur: "Courir" }
+    { normal: "Chaise", imposteur: "Tabouret" },
+    { normal: "Chocolat", imposteur: "Vanille" },
+    { normal: "Ski", imposteur: "Snowboard" }
 ];
 
 app.use(express.static(__dirname));
@@ -264,13 +60,18 @@ io.on('connection', (socket) => {
             id: roomId,
             players: [],
             currentTurn: 0,
-            votes: {},
-            voteToContinue: 0,
+            
+            // Gestion des votes
+            votingVotes: {},     // Pour éliminer qqn
+            decisionVotes: {},   // Pour choisir Vote vs Cycle
+            emergencyVotes: new Set(), // Pour forcer le vote (Set pour éviter doublons)
+            
             impostorIds: [],
             whiteId: null,
             currentPair: {},
             timer: null,
-            gameActive: false
+            gameActive: false,
+            roundCount: 0 // Pour savoir si on affiche le bouton urgence
         };
 
         joinRoom(socket, roomId, username, avatar, true);
@@ -325,44 +126,37 @@ io.on('connection', (socket) => {
         game.gameActive = true;
         game.players.forEach(p => p.alive = true);
         game.currentTurn = 0;
-        game.voteToContinue = 0;
-        game.votes = {};
+        
+        // Reset des états
+        game.votingVotes = {};
+        game.decisionVotes = {};
+        game.emergencyVotes = new Set();
         game.impostorIds = [];
         game.whiteId = null;
+        game.roundCount = 0;
 
-        // Choix du mot aléatoire
         game.currentPair = wordPairs[Math.floor(Math.random() * wordPairs.length)];
         
-        // DISTRIBUTION DES RÔLES
+        // Rôles
         let availablePlayers = [...game.players];
-
-        // 1. Nombre d'imposteurs (2 si >= 6 joueurs)
         const numberOfImpostors = game.players.length >= 6 ? 2 : 1;
 
-        // 2. Assigner Imposteurs
         for (let i = 0; i < numberOfImpostors; i++) {
             const randomIndex = Math.floor(Math.random() * availablePlayers.length);
             game.impostorIds.push(availablePlayers[randomIndex].id);
             availablePlayers.splice(randomIndex, 1);
         }
 
-        // 3. Assigner M. Blanc (si >= 5 joueurs)
         if (game.players.length >= 5 && availablePlayers.length > 0) {
             const whiteIndex = Math.floor(Math.random() * availablePlayers.length);
             game.whiteId = availablePlayers[whiteIndex].id;
         }
 
-        // ENVOI
         game.players.forEach((p) => {
             let word = "";
-            
-            if (game.impostorIds.includes(p.id)) {
-                word = game.currentPair.imposteur;
-            } else if (p.id === game.whiteId) {
-                word = "???"; 
-            } else {
-                word = game.currentPair.normal;
-            }
+            if (game.impostorIds.includes(p.id)) word = game.currentPair.imposteur;
+            else if (p.id === game.whiteId) word = "???"; 
+            else word = game.currentPair.normal;
 
             io.to(p.id).emit('gameStarted', { 
                 word: word, 
@@ -381,47 +175,118 @@ io.on('connection', (socket) => {
         } while (game.currentTurn < game.players.length && !game.players[game.currentTurn].alive);
 
         if (game.currentTurn >= game.players.length) {
-            game.voteToContinue = 0;
-            io.to(game.id).emit('roundFinished', { total: getAlivePlayers(game).length });
+            // FIN DU TOUR -> PHASE DE DÉCISION
+            startDecisionPhase(game);
         } else {
             io.to(game.id).emit('updateTurn', game.players[game.currentTurn].name);
         }
     });
 
-    // --- 5. LOGIQUE JEU ---
-    socket.on('requestMoreIndices', () => {
+    // --- 5. NOUVELLE PHASE : DÉCISION (Vote vs Indices) ---
+    function startDecisionPhase(game) {
+        game.decisionVotes = {};
+        game.roundCount++; // On a fini un tour complet
+        
+        let timeLeft = 30;
+        io.to(game.id).emit('decisionPhaseStarted', { timer: timeLeft });
+
+        if (game.timer) clearInterval(game.timer);
+        game.timer = setInterval(() => {
+            timeLeft--;
+            io.to(game.id).emit('timerUpdate', timeLeft); // On réutilise l'event timer
+            if (timeLeft <= 0) {
+                resolveDecision(game);
+            }
+        }, 1000);
+    }
+
+    socket.on('submitDecision', (choice) => {
+        // choice = 'vote' ou 'cycle'
         const game = games[socket.roomId];
         if (!game) return;
-        game.voteToContinue++;
-        const aliveTotal = getAlivePlayers(game).length;
-        io.to(game.id).emit('updateDecisionCount', { count: game.voteToContinue, total: aliveTotal });
+        const player = game.players.find(p => p.id === socket.id);
+        if (!player || !player.alive) return;
 
-        if (game.voteToContinue >= aliveTotal) {
-            startNewCycle(game, "Tout le monde veut refaire un tour !");
+        game.decisionVotes[socket.id] = choice;
+
+        // Si tout le monde a choisi, on résout tout de suite
+        if (Object.keys(game.decisionVotes).length === getAlivePlayers(game).length) {
+            resolveDecision(game);
         }
     });
 
+    function resolveDecision(game) {
+        clearInterval(game.timer);
+        
+        let votesForKick = 0;
+        let votesForCycle = 0;
+
+        Object.values(game.decisionVotes).forEach(v => {
+            if (v === 'vote') votesForKick++;
+            if (v === 'cycle') votesForCycle++;
+        });
+
+        // Logique : Il faut une majorité stricte pour le vote
+        // Si égalité -> Cycle
+        if (votesForKick > votesForCycle) {
+            startVotingPhase(game);
+        } else {
+            startNewCycle(game, "La majorité veut refaire un tour d'indices !");
+        }
+    }
+
+    // --- 6. GESTION BOUTON URGENCE ---
+    socket.on('triggerEmergency', () => {
+        const game = games[socket.roomId];
+        if (!game) return;
+        const player = game.players.find(p => p.id === socket.id);
+        if (!player || !player.alive) return;
+
+        // Ajouter le vote (Set gère l'unicité)
+        game.emergencyVotes.add(socket.id);
+
+        const aliveCount = getAlivePlayers(game).length;
+        // Seuil : Strictement supérieur à la moitié
+        // ex: 5 joueurs. 5/2 = 2.5. Il faut 3 votes.
+        // ex: 4 joueurs. 4/2 = 2. Il faut 3 votes.
+        const threshold = Math.floor(aliveCount / 2) + 1;
+
+        io.to(game.id).emit('updateEmergencyState', { 
+            count: game.emergencyVotes.size, 
+            required: threshold 
+        });
+
+        if (game.emergencyVotes.size >= threshold) {
+            startVotingPhase(game);
+        }
+    });
+
+    // --- 7. LOGIQUE JEU (Cycle & Vote) ---
+
     function startNewCycle(game, message) {
-        game.voteToContinue = 0;
-        game.votes = {};
+        game.votingVotes = {};
+        game.decisionVotes = {};
+        game.emergencyVotes = new Set(); // Reset des votes d'urgence
+        
         game.currentTurn = 0;
         while (game.currentTurn < game.players.length && !game.players[game.currentTurn].alive) {
             game.currentTurn++;
         }
+        
+        // Calcul du seuil pour l'affichage client
+        const aliveCount = getAlivePlayers(game).length;
+        const threshold = Math.floor(aliveCount / 2) + 1;
+
         io.to(game.id).emit('startNewCycle', { 
             nextPlayer: game.players[game.currentTurn].name,
-            message: message 
+            message: message,
+            showEmergency: game.roundCount > 0, // Affiche le bouton seulement après le 1er tour
+            emergencyThreshold: threshold
         });
     }
 
-    socket.on('requestVotePhase', () => {
-        const game = games[socket.roomId];
-        if (!game) return;
-        startVotingPhase(game);
-    });
-
     function startVotingPhase(game) {
-        game.votes = {};
+        game.votingVotes = {};
         let timeLeft = 30;
         const alivePlayers = getAlivePlayers(game);
         const voteData = alivePlayers.map(p => ({ id: p.id, name: p.name, avatar: p.avatar }));
@@ -441,8 +306,8 @@ io.on('connection', (socket) => {
     socket.on('castVote', (targetName) => {
         const game = games[socket.roomId];
         if (!game) return;
-        game.votes[socket.id] = targetName;
-        if (Object.keys(game.votes).length === getAlivePlayers(game).length) {
+        game.votingVotes[socket.id] = targetName;
+        if (Object.keys(game.votingVotes).length === getAlivePlayers(game).length) {
             finishVote(game);
         }
     });
@@ -450,7 +315,7 @@ io.on('connection', (socket) => {
     function finishVote(game) {
         clearInterval(game.timer);
         let counts = {};
-        Object.values(game.votes).forEach(name => {
+        Object.values(game.votingVotes).forEach(name => {
             counts[name] = (counts[name] || 0) + 1;
         });
 
@@ -487,7 +352,6 @@ io.on('connection', (socket) => {
             .filter(p => game.impostorIds.includes(p.id))
             .map(p => p.name).join(' & ');
 
-        // 1. Plus d'imposteurs -> Victoire Citoyens
         if (aliveImpostors.length === 0) {
             game.gameActive = false;
             io.to(game.id).emit('gameResult', { 
@@ -499,7 +363,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 2. Imposteurs en surnombre -> Victoire Imposteurs
         if (aliveImpostors.length >= aliveOthers.length) {
             game.gameActive = false;
             io.to(game.id).emit('gameResult', { 
@@ -511,7 +374,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // 3. Partie continue
         if (game.impostorIds.includes(eliminatedPlayer.id)) {
             startNewCycle(game, `🔥 BRAVO ! ${eliminatedName} était un IMPOSTEUR ! Mais attention, il n'est pas seul...`);
             return;
