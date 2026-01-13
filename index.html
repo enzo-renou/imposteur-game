@@ -23,34 +23,17 @@
 
         body {
             font-family: 'Rubik', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            padding: 20px;
-            color: var(--text-color);
-            overflow-x: hidden;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0; padding: 20px; color: var(--text-color); overflow-x: hidden;
         }
 
-        @keyframes slideUpFade {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         .screen-container {
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 450px;
-            text-align: center;
-            animation: slideUpFade 0.5s ease-out;
-            position: relative;
-            z-index: 10;
+            background: var(--card-bg); padding: 30px; border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 450px;
+            text-align: center; animation: slideUpFade 0.5s ease-out; position: relative; z-index: 10;
         }
         
         h1 { margin-top: 0; color: var(--primary-color); font-size: 2.5em; text-shadow: 2px 2px 0px #eee; }
@@ -70,8 +53,7 @@
             border-radius: 12px; border: none; cursor: pointer;
             font-weight: 700; font-size: 18px; font-family: inherit; color: white;
             background-color: var(--primary-color);
-            box-shadow: 0 6px 0 var(--primary-dark); 
-            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 6px 0 var(--primary-dark); transition: transform 0.1s, box-shadow 0.1s;
         }
         button:hover { transform: translateY(-2px); background-color: #5a1aff; }
         button:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--primary-dark); }
@@ -82,34 +64,16 @@
         .continue-btn { background-color: var(--secondary-color); box-shadow: 0 6px 0 var(--secondary-dark); }
         .or-divider { margin: 20px 0; color: #999; font-weight: bold; }
 
-        #avatar-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
-            margin: 20px 0; justify-items: center;
-        }
-        .avatar-option {
-            width: 80px; height: 80px; border-radius: 15px; border: 3px solid transparent;
-            cursor: pointer; transition: 0.2s; background-color: #f0f0f0; object-fit: cover;
-        }
-        .avatar-option:hover { transform: scale(1.05); }
-        .avatar-option.selected {
-            border-color: var(--primary-color); box-shadow: 0 0 15px rgba(76, 0, 255, 0.4);
-            transform: scale(1.1); background-color: #e0d4fc;
-        }
+        #avatar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; justify-items: center; }
+        .avatar-option { width: 80px; height: 80px; border-radius: 15px; border: 3px solid transparent; cursor: pointer; background-color: #f0f0f0; object-fit: cover; }
+        .avatar-option.selected { border-color: var(--primary-color); box-shadow: 0 0 15px rgba(76, 0, 255, 0.4); transform: scale(1.1); background-color: #e0d4fc; }
 
-        #room-code-display {
-            font-size: 1.5em; font-weight: 700; color: var(--primary-color);
-            margin: 20px 0; padding: 15px; background: #eef2ff;
-            border-radius: 12px; border: 2px dashed var(--primary-color); cursor: pointer;
-        }
+        #room-code-display { font-size: 1.5em; font-weight: 700; color: var(--primary-color); margin: 20px 0; padding: 15px; background: #eef2ff; border-radius: 12px; border: 2px dashed var(--primary-color); cursor: pointer; }
         #players-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 15px; margin: 20px 0; }
         .player-card { display: flex; flex-direction: column; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 12px; }
         .player-card img { width: 50px; height: 50px; border-radius: 50%; margin-bottom: 5px; object-fit: cover; }
         
-        #role-card {
-            background: white; padding: 30px; border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin: 20px 0;
-            border-bottom: 6px solid var(--primary-color);
-        }
+        #role-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin: 20px 0; border-bottom: 6px solid var(--primary-color); }
         #role-display { font-size: 2em; margin: 0; }
         #turn-info { font-size: 1.2em; margin: 20px 0; font-weight: 600;}
         #timer-display { font-size: 3em; font-weight: 800; color: var(--primary-color); }
@@ -118,65 +82,43 @@
         .dead-text { color: var(--danger-color) !important; }
         #game-message { background: #fff3cd; color: #856404; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: bold; }
 
-        .candidate-btn { display: flex; align-items: center; justify-content: center; font-size: 14px; padding: 10px; }
+        /* --- HISTORIQUE (Tableau) --- */
+        #history-box {
+            background: #fff; border: 2px solid #eee; border-radius: 12px;
+            padding: 10px; margin-bottom: 20px; text-align: left; max-height: 200px; overflow-y: auto;
+        }
+        .history-row { border-bottom: 1px solid #eee; padding: 5px 0; font-size: 0.9em; }
+        .history-row:last-child { border-bottom: none; }
+        .hist-name { font-weight: bold; color: var(--primary-color); }
+
+        /* --- SAISIE MOT --- */
+        #word-input-area {
+            background: #eef2ff; padding: 15px; border-radius: 12px; margin-top: 15px;
+        }
+        #turn-timer { font-size: 1.2em; font-weight: bold; color: var(--danger-color); margin-bottom: 5px; display: block; }
 
         /* --- DECISION SCREEN --- */
-        #decision-choices {
-            display: flex; gap: 10px; flex-direction: column;
-            margin-top: 20px;
-        }
-        .big-choice-btn {
-            height: 80px; font-size: 1.2em; display: flex;
-            align-items: center; justify-content: center;
-        }
+        #decision-choices { display: flex; gap: 10px; flex-direction: column; margin-top: 20px; }
+        .big-choice-btn { height: 80px; font-size: 1.2em; display: flex; align-items: center; justify-content: center; }
 
         /* --- EMERGENCY BUTTON --- */
-        #emergency-container {
-            margin-top: 30px;
-            border-top: 2px dashed #ddd;
-            padding-top: 20px;
-        }
-        #emergency-btn {
-            background-color: var(--danger-color);
-            box-shadow: 0 6px 0 var(--danger-dark);
-            font-size: 1.1em;
-        }
-        #emergency-btn:active {
-            background-color: var(--danger-dark);
-            box-shadow: 0 2px 0 #990000;
-        }
+        #emergency-container { margin-top: 30px; border-top: 2px dashed #ddd; padding-top: 20px; }
+        #emergency-btn { background-color: var(--danger-color); box-shadow: 0 6px 0 var(--danger-dark); font-size: 1.1em; }
+        #emergency-btn:active { background-color: var(--danger-dark); box-shadow: 0 2px 0 #990000; }
+
+        /* --- MR WHITE GUESS --- */
+        #white-guess-screen { background-color: #333; color: white; }
+        #white-guess-screen h2 { color: #fff; }
+        #white-guess-input { border: 3px solid #fff; background: #555; color: white; }
+        
+        .candidate-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; padding: 10px; height: auto; }
+        .last-word-display { font-size: 0.8em; font-style: italic; color: #eee; margin-top: 2px; }
 
         /* --- HELP & MODAL --- */
-        #help-btn {
-            position: fixed; top: 20px; right: 20px;
-            width: 40px; height: 40px; border-radius: 50%;
-            background: white; color: var(--primary-color);
-            font-weight: bold; font-size: 20px;
-            border: 2px solid var(--primary-color);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            padding: 0; z-index: 1000;
-        }
-        #help-btn:hover { transform: scale(1.1); }
-
-        #rules-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); z-index: 2000;
-            display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(5px);
-        }
-        .modal-content {
-            background: white; padding: 30px; border-radius: 20px;
-            max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;
-            text-align: left; position: relative;
-        }
-        .modal-content h2 { text-align: center; color: var(--primary-color); }
-        .close-modal {
-            position: absolute; top: 15px; right: 20px;
-            font-size: 25px; font-weight: bold; cursor: pointer; color: #999;
-        }
-        .rule-item { margin-bottom: 15px; }
-        .rule-role { font-weight: bold; color: var(--primary-color); }
+        #help-btn { position: fixed; top: 20px; right: 20px; width: 40px; height: 40px; border-radius: 50%; background: white; color: var(--primary-color); font-weight: bold; font-size: 20px; border: 2px solid var(--primary-color); box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 1000; }
+        #rules-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; text-align: left; position: relative; }
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 25px; font-weight: bold; cursor: pointer; color: #999; }
     </style>
 </head>
 <body>
@@ -187,28 +129,10 @@
         <div class="modal-content">
             <span class="close-modal" onclick="toggleRules()">&times;</span>
             <h2>📖 Règles du Jeu</h2>
-            
-            <div class="rule-item">
-                <span class="rule-role">🧑‍🌾 Les Citoyens :</span><br>
-                Mot commun (ex: "Pizza"). Démasquez l'Imposteur.
-            </div>
-            <div class="rule-item">
-                <span class="rule-role">🕵️ L'Imposteur :</span><br>
-                Mot différent (ex: "Burger"). Fondez-vous dans la masse.
-            </div>
-            <div class="rule-item">
-                <span class="rule-role">👻 M. Blanc (5+ Joueurs) :</span><br>
-                AUCUN mot. Bluffez !
-            </div>
-            <hr style="border:0; border-top:1px dashed #ccc; margin:15px 0;">
-            <div class="rule-item">
-                <strong>🚨 Phase de Décision :</strong><br>
-                Après un tour, votez pour <em>Éjecter</em> ou <em>Refaire un tour</em>. Majorité absolue requise.
-            </div>
-            <div class="rule-item">
-                <strong>🔔 Bouton Urgence :</strong><br>
-                Après le 1er tour, forcez le vote à tout moment si plus de 50% des joueurs cliquent.
-            </div>
+            <p>1. On ne parle plus ! Écrivez votre indice.</p>
+            <p>2. Vous avez 1m30 par tour.</p>
+            <p>3. <strong>M. Blanc</strong> : Si vous êtes éliminé, vous avez une dernière chance de deviner le mot pour voler la victoire !</p>
+            <p>4. <strong>Urgence</strong> : Forcez le vote si vous êtes sûrs.</p>
         </div>
     </div>
 
@@ -245,12 +169,23 @@
 
         <div id="game-screen" class="hidden">
             <div id="game-message" class="hidden"></div>
+            
+            <div id="history-box" class="hidden">
+                <strong>📜 Mots précédents :</strong>
+                <div id="history-content"></div>
+            </div>
+
             <div id="role-card">
                 <h2 id="role-display">Ton mot : ???</h2>
             </div>
             
             <p id="turn-info">Préparation...</p>
-            <button id="next-btn" class="hidden continue-btn" onclick="passTurn()">J'ai donné mon indice (Suivant)</button>
+
+            <div id="word-input-area" class="hidden">
+                <span id="turn-timer">01:30</span>
+                <input type="text" id="game-word-input" placeholder="Écris ton indice..." maxlength="20">
+                <button onclick="submitWord()">Envoyer</button>
+            </div>
             
             <div id="emergency-container" class="hidden">
                 <button id="emergency-btn" onclick="clickEmergency()">
@@ -262,12 +197,11 @@
         <div id="decision-screen" class="hidden">
             <h2>⏱️ C'est l'heure du choix !</h2>
             <div id="timer-display-decision" style="font-size:3em; font-weight:800; color:var(--primary-color);">30</div>
-            
             <div id="decision-choices">
                 <button class="vote-btn big-choice-btn" onclick="makeDecision('vote')">🚨 PASSER AU VOTE</button>
                 <button class="continue-btn big-choice-btn" onclick="makeDecision('cycle')">🔄 REFAIRE UN TOUR</button>
             </div>
-            <p id="decision-wait-msg" class="hidden" style="color:#999; font-style:italic;">Choix enregistré. Attente des autres...</p>
+            <p id="decision-wait-msg" class="hidden" style="color:#999; font-style:italic;">Choix enregistré...</p>
         </div>
 
         <div id="voting-screen" class="hidden">
@@ -279,6 +213,20 @@
             </div>
             <p id="vote-confirmation" class="hidden" style="color: var(--secondary-color); font-weight: bold; font-size: 1.2em;">✅ Vote enregistré !</p>
         </div>
+
+        <div id="white-guess-screen" class="screen-container hidden">
+            <h1>😱 DERNIÈRE CHANCE !</h1>
+            <p>Tu es M. Blanc ! Devine le mot des Citoyens pour voler la victoire.</p>
+            <input type="text" id="white-guess-input" placeholder="Le mot est...">
+            <button class="continue-btn" onclick="submitWhiteGuess()">Tenter ma chance</button>
+        </div>
+        
+        <div id="wait-white-screen" class="screen-container hidden">
+            <h1>😱 SUSPENSE...</h1>
+            <p><strong id="white-name-display">Joueur</strong> est M. Blanc !</p>
+            <p>Il tente de deviner le mot...</p>
+        </div>
+
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
