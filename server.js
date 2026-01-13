@@ -6,10 +6,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Stockage des parties
 const games = {}; 
 
-// Liste de 200 paires (Celle que je t'ai générée avant)
+// Liste des mots
 const wordPairs = [
     { normal: "Sable", imposteur: "Gravier" }, { normal: "Pizza", imposteur: "Burger" },
     { normal: "Banane", imposteur: "Pomme" }, { normal: "Thé", imposteur: "Café" },
@@ -132,7 +131,6 @@ function getAlivePlayers(game) {
     return game.players.filter(p => p.alive);
 }
 
-// Fonction pour normaliser les chaines (enlever accents, majuscules)
 function normalizeString(str) {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
@@ -156,11 +154,9 @@ io.on('connection', (socket) => {
             whiteId: null,
             currentPair: {},
             timer: null,
-            turnTimer: null, // Timer pour le tour de parole (1m30)
+            turnTimer: null,
             gameActive: false,
             roundCount: 0,
-            
-            // Historique des mots { playerId: ["mot1", "mot2"] }
             wordHistory: {} 
         };
 
@@ -199,7 +195,6 @@ io.on('connection', (socket) => {
             isAdmin: isAdmin 
         });
 
-        // Init historique
         game.wordHistory[socket.id] = [];
 
         socket.emit('roomJoined', { roomId: roomId, isAdmin: isAdmin });
@@ -227,7 +222,6 @@ io.on('connection', (socket) => {
         game.impostorIds = [];
         game.whiteId = null;
         game.roundCount = 0;
-        // Reset historique des mots pour la nouvelle partie
         Object.keys(game.wordHistory).forEach(key => game.wordHistory[key] = []);
 
         game.currentPair = wordPairs[Math.floor(Math.random() * wordPairs.length)];
@@ -259,11 +253,9 @@ io.on('connection', (socket) => {
             });
         });
 
-        // Lancer le timer du premier tour (90s)
         startTurnTimer(game);
     });
 
-    // Gestion du timer de tour (1m30 pour écrire)
     function startTurnTimer(game) {
         if (game.turnTimer) clearInterval(game.turnTimer);
         
@@ -272,35 +264,29 @@ io.on('connection', (socket) => {
         
         game.turnTimer = setInterval(() => {
             timeLeft--;
-            // On envoie pas tout le temps pour pas spammer, le client gère l'affichage fluide
-            // Mais on force la fin
+            io.to(game.id).emit('turnTimerUpdate', timeLeft);
+            
             if (timeLeft <= 0) {
                 clearInterval(game.turnTimer);
-                // Force le passage au tour suivant avec un mot vide
                 handleWordSubmission(game, game.players[game.currentTurn].id, "...");
             }
         }, 1000);
     }
 
-    // --- 4. SOUMISSION DU MOT (Remplace nextTurn) ---
+    // --- 4. SOUMISSION DU MOT ---
     socket.on('submitWord', (word) => {
         const game = games[socket.roomId];
         if (!game) return;
-        
-        // On vérifie que c'est bien à lui
         if (game.players[game.currentTurn].id !== socket.id) return;
-        
         handleWordSubmission(game, socket.id, word);
     });
 
     function handleWordSubmission(game, playerId, word) {
         if (game.turnTimer) clearInterval(game.turnTimer);
 
-        // Nettoyage et enregistrement du mot
         const cleanWord = word && word.trim() !== "" ? word.trim() : "...";
         game.wordHistory[playerId].push(cleanWord);
 
-        // Tour suivant
         do {
             game.currentTurn++;
         } while (game.currentTurn < game.players.length && !game.players[game.currentTurn].alive);
@@ -390,24 +376,12 @@ io.on('connection', (socket) => {
         const aliveCount = getAlivePlayers(game).length;
         const threshold = Math.floor(aliveCount / 2) + 1;
 
-        // Préparer l'historique complet pour affichage
-        // On envoie tout le tableau wordHistory
-        const historyData = [];
-        game.players.forEach(p => {
-             historyData.push({
-                 name: p.name,
-                 words: game.wordHistory[p.id] || [],
-                 alive: p.alive
-             });
-        });
-
         io.to(game.id).emit('startNewCycle', { 
             nextPlayer: game.players[game.currentTurn].name,
             message: message,
             showEmergency: game.roundCount > 0,
             emergencyThreshold: threshold,
-            fullHistory: historyData, // Pour le tableau récap
-            roundNumber: game.roundCount // Pour savoir si on affiche
+            roundNumber: game.roundCount
         });
 
         startTurnTimer(game);
@@ -415,10 +389,9 @@ io.on('connection', (socket) => {
 
     function startVotingPhase(game) {
         game.votingVotes = {};
-        let timeLeft = 30;
+        let timeLeft = 120; // 2 Minutes
         const alivePlayers = getAlivePlayers(game);
         
-        // On envoie aussi les mots du DERNIER tour pour aider au vote
         const voteData = alivePlayers.map(p => {
             const words = game.wordHistory[p.id];
             const lastWord = words && words.length > 0 ? words[words.length - 1] : "...";
@@ -451,39 +424,35 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- 8. LOGIQUE M. BLANC (LAST CHANCE) ---
+    // --- 8. LOGIQUE M. BLANC ---
     socket.on('mrWhiteGuess', (guess) => {
         const game = games[socket.roomId];
         if (!game) return;
-        
-        // Seul M. Blanc peut faire ça (vérif basique via socket.id = whiteId)
         if (socket.id !== game.whiteId) return;
 
         const correctWord = normalizeString(game.currentPair.normal);
         const playerGuess = normalizeString(guess);
-
         const whitePlayer = game.players.find(p => p.id === game.whiteId);
-        const name = whitePlayer ? whitePlayer.name : "M. Blanc";
+
+        // Récupérer les noms des imposteurs pour l'affichage
+        const allImpostorNames = game.players
+            .filter(p => game.impostorIds.includes(p.id))
+            .map(p => p.name).join(' & ');
 
         if (correctWord === playerGuess) {
-            // IL A TROUVÉ !
             game.gameActive = false;
+            // VICTOIRE MR WHITE
             io.to(game.id).emit('gameResult', { 
-                success: false, // Citoyens perdent
-                message: "M. BLANC A TROUVÉ LE MOT ! 😱 Il vole la victoire !",
-                impostor: "N/A",
-                eliminated: "Les Citoyens (Vol de victoire)"
+                winner: 'white',
+                message: "M. WHITE A TROUVÉ LE MOT ! 😱 Il vole la victoire !",
+                impostor: allImpostorNames, // On affiche les vrais imposteurs
+                eliminated: whitePlayer.name // On affiche Mr Blanc comme "joueur clé"
             });
         } else {
-            // IL A RATÉ -> On reprend l'élimination classique
-            io.to(game.id).emit('gameMessage', { message: `M. Blanc a proposé "${guess}"... et c'est RATÉ !` });
-            
-            // On le marque mort pour de bon
+            io.to(game.id).emit('gameMessage', { message: `M. White a proposé "${guess}"... et c'est RATÉ !` });
             whitePlayer.alive = false;
-            io.to(whitePlayer.id).emit('youAreDead'); // Retour écran mort
-            
-            // On continue la logique d'élimination (M. Blanc éliminé, jeu continue)
-            continueEliminationLogic(game, whitePlayer, name);
+            io.to(whitePlayer.id).emit('youAreDead');
+            continueEliminationLogic(game, whitePlayer, whitePlayer.name);
         }
     });
 
@@ -514,20 +483,15 @@ io.on('connection', (socket) => {
         const eliminatedPlayer = game.players.find(p => p.name === eliminatedName);
         if (!eliminatedPlayer) return startNewCycle(game, "Erreur lors du vote.");
 
-        // --- INTERCEPTION M. BLANC ---
         if (eliminatedPlayer.id === game.whiteId) {
-            // On ne le tue pas tout de suite, on lui donne sa chance
             io.to(eliminatedPlayer.id).emit('mrWhiteLastChance');
-            // On dit aux autres d'attendre
-            eliminatedPlayer.alive = false; // Techniquement il est sorti du jeu des votes
+            eliminatedPlayer.alive = false;
             io.to(game.id).emit('waitingForWhite', { name: eliminatedName });
             return;
         }
 
-        // Joueur classique éliminé
         eliminatedPlayer.alive = false; 
         io.to(eliminatedPlayer.id).emit('youAreDead');
-        
         continueEliminationLogic(game, eliminatedPlayer, eliminatedName);
     }
 
@@ -542,7 +506,7 @@ io.on('connection', (socket) => {
         if (aliveImpostors.length === 0) {
             game.gameActive = false;
             io.to(game.id).emit('gameResult', { 
-                success: true, 
+                winner: 'citizens',
                 message: "VICTOIRE DES CITOYENS ! Tous les imposteurs sont éliminés.",
                 impostor: allImpostorNames,
                 eliminated: eliminatedName
@@ -553,7 +517,7 @@ io.on('connection', (socket) => {
         if (aliveImpostors.length >= aliveOthers.length) {
             game.gameActive = false;
             io.to(game.id).emit('gameResult', { 
-                success: false, 
+                winner: 'impostors',
                 message: "LES IMPOSTEURS ONT GAGNÉ ! (Majorité numérique)",
                 impostor: allImpostorNames,
                 eliminated: eliminatedName
@@ -567,11 +531,11 @@ io.on('connection', (socket) => {
         }
 
         if (eliminatedPlayer.id === game.whiteId) {
-             startNewCycle(game, `⚠️ C'ÉTAIT M. BLANC ! (${eliminatedName} éliminé). Les imposteurs sont toujours là...`);
+             startNewCycle(game, `⚠️ C'ÉTAIT M. WHITE ! (${eliminatedName} éliminé). Les imposteurs sont toujours là...`);
              return;
         }
 
-        startNewCycle(game, `${eliminatedName} a été éliminé... C'était un simple Citoyen !`);
+        startNewCycle(game, `${eliminatedName} a été éliminé... C'était un Citoyen !`);
     }
 
     socket.on('disconnect', () => {

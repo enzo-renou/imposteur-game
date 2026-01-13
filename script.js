@@ -5,6 +5,7 @@ let currentRoomId = "";
 let isDead = false;
 let pendingAction = "";
 let pendingRoomCode = "";
+let myRole = ""; // "white", "impostor", "citizen"
 
 // --- INITIALISATION ---
 window.onload = () => {
@@ -93,7 +94,11 @@ socket.on('gameStarted', (data) => {
     switchScreen('game-screen');
     document.getElementById('role-display').innerText = data.word;
     document.getElementById('emergency-container').classList.add('hidden');
-    document.getElementById('history-box').classList.add('hidden'); // Caché au début
+    
+    // Détection du rôle local
+    if(data.word === "???") myRole = "white";
+    else myRole = "citizen"; 
+    
     updateTurnUI(data.currentPlayer);
 });
 
@@ -118,16 +123,13 @@ function updateTurnUI(currentPlayerName) {
     }
 }
 
-// Timer visuel 90s
+// Timer Tour (1m30)
 socket.on('turnTimerUpdate', (time) => {
-    const min = Math.floor(time / 60);
-    const sec = time % 60;
-    document.getElementById('turn-timer').innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+    document.getElementById('turn-timer').innerText = formatTime(time);
 });
 
 function submitWord() {
     const word = document.getElementById('game-word-input').value.trim();
-    // On peut envoyer vide, le serveur remplacera par "..."
     document.getElementById('word-input-area').classList.add('hidden');
     socket.emit('submitWord', word);
 }
@@ -141,20 +143,6 @@ socket.on('startNewCycle', (data) => {
          setTimeout(() => msg.classList.add('hidden'), 4000);
     }
     
-    // Affichage Historique
-    if (data.roundNumber > 0) {
-        const histBox = document.getElementById('history-box');
-        const histContent = document.getElementById('history-content');
-        histBox.classList.remove('hidden');
-        
-        // Construction du tableau
-        histContent.innerHTML = data.fullHistory.map(p => {
-             const wordsStr = p.words.join(', ');
-             const status = p.alive ? "" : "💀";
-             return `<div class="history-row"><span class="hist-name">${p.name} ${status} :</span> ${wordsStr}</div>`;
-        }).join('');
-    }
-
     // Reset Urgence
     const emerContainer = document.getElementById('emergency-container');
     document.getElementById('emergency-count').innerText = "0";
@@ -198,7 +186,6 @@ socket.on('votingStarted', (data) => {
     data.players.forEach(p => {
         const btn = document.createElement('button');
         btn.className = "candidate-btn secondary-btn";
-        // Affiche l'avatar + le dernier mot dit
         btn.innerHTML = `
             <div><img src="${p.avatar}" style="width:30px; height:30px; vertical-align:middle; border-radius:50%; margin-right:5px;">${p.name}</div>
             <div class="last-word-display">"${p.lastWord}"</div>
@@ -215,15 +202,13 @@ function submitVote(name) {
 
 // --- LOGIQUE M. BLANC ---
 socket.on('mrWhiteLastChance', () => {
-    // Seul M. Blanc reçoit ça
-    // On cache les écrans principaux et on affiche l'input
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('voting-screen').classList.add('hidden');
     document.getElementById('white-guess-screen').classList.remove('hidden');
+    myRole = "white"; // Confirmation
 });
 
 socket.on('waitingForWhite', (data) => {
-    // Les autres joueurs voient ça
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('voting-screen').classList.add('hidden');
     document.getElementById('wait-white-screen').classList.remove('hidden');
@@ -238,20 +223,41 @@ function submitWhiteGuess() {
 
 // --- RÉSULTATS ---
 socket.on('gameResult', (data) => {
-    // Cache les écrans spéciaux M. Blanc
     document.getElementById('white-guess-screen').classList.add('hidden');
     document.getElementById('wait-white-screen').classList.add('hidden');
-
     switchScreen('game-screen');
     document.getElementById('emergency-container').classList.add('hidden');
     
     const roleCard = document.getElementById('role-card');
     const turnInfo = document.getElementById('turn-info');
     
-    roleCard.style.borderBottomColor = data.success ? "var(--secondary-color)" : "var(--danger-color)";
-    document.getElementById('role-display').innerText = data.success ? "🎉 VICTOIRE !" : "💀 DÉFAITE...";
+    // LOGIQUE VICTOIRE LOCALE
+    let isVictory = false;
     
-    if (data.success) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+    if (data.winner === 'white') {
+        if (myRole === 'white') isVictory = true;
+    } 
+    else if (data.winner === 'impostors') {
+        // Pour les imposteurs, on n'a pas mis de flag explicite localement
+        // mais si le serveur dit "impostors" et que je ne suis pas "white",
+        // si je suis citoyen j'ai perdu. Si je suis imposteur j'ai gagné.
+        // Simplification : On affiche le message du serveur qui est clair.
+    }
+    
+    // Affichage spécifique VICTOIRE pour Mr White
+    if (data.winner === 'white' && myRole === 'white') {
+        roleCard.style.borderBottomColor = "var(--secondary-color)"; // Vert
+        document.getElementById('role-display').innerText = "🎉 VICTOIRE !";
+    } else {
+        // Comportement par défaut (affiche Titre serveur si besoin, ou juste le message)
+        roleCard.style.borderBottomColor = (data.winner === 'citizens' && myRole !== 'white') ? "var(--secondary-color)" : "var(--primary-color)";
+        // On laisse le message du serveur parler, sauf si c'est une défaite explicite
+        document.getElementById('role-display').innerText = "FIN DE PARTIE";
+    }
+    
+    if (data.success || (data.winner === 'white' && myRole === 'white')) {
+         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+    }
 
     let resText = `<strong>${data.message}</strong><br><br>`;
     resText += `🕵️ Imposteur(s) : <strong>${data.impostor}</strong>`;
@@ -281,20 +287,44 @@ socket.on('youAreDead', () => {
 });
 function clickEmergency() { if (isDead) return; document.getElementById('emergency-btn').disabled = true; socket.emit('triggerEmergency'); }
 socket.on('updateEmergencyState', (data) => { document.getElementById('emergency-count').innerText = data.count; document.getElementById('emergency-needed').innerText = data.required; });
+
 socket.on('timerUpdate', (time) => {
-    const d1 = document.getElementById('timer-display'); const d2 = document.getElementById('timer-display-decision');
-    if(d1) d1.innerText = time; if(d2) d2.innerText = time;
+    const formatted = formatTime(time);
+    const d1 = document.getElementById('timer-display'); 
+    const d2 = document.getElementById('timer-display-decision');
+    if(d1) d1.innerText = formatted; 
+    if(d2) d2.innerText = formatted;
     const col = time <= 5 ? "red" : "var(--primary-color)";
-    if(d1) d1.style.color = col; if(d2) d2.style.color = col;
+    if(d1) d1.style.color = col; 
+    if(d2) d2.style.color = col;
 });
+
+// Helper pour format mm:ss
+function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+}
+
+// Fonction copier propre
+function copyLink() {
+    const url = window.location.origin + '/?room=' + currentRoomId;
+    navigator.clipboard.writeText(url).then(() => {
+        const feedback = document.getElementById('copy-feedback');
+        feedback.classList.remove('hidden');
+        setTimeout(() => feedback.classList.add('hidden'), 2000);
+    }).catch(err => {
+        alert("Erreur copie : " + err);
+    });
+}
+
 socket.on('error', (msg) => alert(msg));
-function copyLink() { navigator.clipboard.writeText(window.location.href).then(() => alert("Lien copié !")); }
 function resetUI() {
     isDead = false;
     document.getElementById('role-card').classList.remove('dead-screen');
     document.getElementById('role-display').classList.remove('dead-text');
     document.getElementById('role-card').style.borderBottomColor = "var(--primary-color)";
-    document.getElementById('white-guess-input').value = ""; // Reset input white
+    document.getElementById('white-guess-input').value = "";
 }
 function startGame() { socket.emit('startGame'); }
 function passTurn() { document.getElementById('next-btn').classList.add('hidden'); socket.emit('nextTurn'); }
