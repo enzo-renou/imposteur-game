@@ -806,7 +806,11 @@ io.on('connection', (socket) => {
     });
 
     socket.on('leaveRoom', () => {
+        const { game, player } = ctx();
+        const roomId = game && game.id;
+        const name = player && player.name;
         leaveCurrent();
+        if (roomId && name && games[roomId]) io.to(roomId).emit('playerLeft', { name });
         socket.emit('leftRoom');
     });
 

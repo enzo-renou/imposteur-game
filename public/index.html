@@ -210,6 +210,8 @@
 
         /* --- DIVERS : aide, son, toast, connexion --- */
         .fab { position: fixed; top: 12px; width: 40px; height: 40px; border-radius: 50%; background: white; color: var(--primary-color); font-weight: bold; font-size: 20px; border: 2px solid var(--primary-color); box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; z-index: 1000; }
+        #leave-btn { left: 14px; width: auto; border-radius: 20px; padding: 0 14px; font-size: 14px; color: var(--danger-color); border-color: var(--danger-color); }
+        #leave-btn:hover { background: #fff0f3; }
         .fab:hover { transform: none; background: #f3eeff; }
         .fab:active { transform: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         #help-btn { right: 14px; }
@@ -226,6 +228,7 @@
             body { padding: 12px; padding-top: 58px; justify-content: flex-start; }
             .fab { top: 10px; width: 36px; height: 36px; font-size: 18px; }
             #help-btn { right: 10px; }
+            #leave-btn { left: 10px; font-size: 13px; padding: 0 10px; }
             #mute-btn { right: 54px; font-size: 16px; }
             .screen-container { padding: 22px 16px; }
             h1 { font-size: 2em; }
@@ -238,6 +241,7 @@
 <body>
 
     <div id="conn-banner" class="hidden">📡 Connexion perdue… reconnexion en cours</div>
+    <button id="leave-btn" class="fab hidden" onclick="confirmLeave()" title="Quitter la salle">🚪 Quitter</button>
     <button id="mute-btn" class="fab" onclick="toggleMute()" title="Son">🔊</button>
     <button id="help-btn" class="fab" onclick="toggleRules()">?</button>
     <div id="toast" class="hidden"></div>
@@ -364,7 +368,6 @@
 
             <button id="start-btn" class="hidden continue-btn" onclick="startGame()">Lancer la partie !</button>
             <p id="waiting-msg" style="color:#999; font-style:italic;">En attente de l'hôte...</p>
-            <button class="link-btn" onclick="leaveRoom()">Quitter la salle</button>
         </div>
 
         <!-- JEU : INDICES -->

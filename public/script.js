@@ -142,9 +142,13 @@ const WITH_HISTORY = ['game-screen', 'decision-screen', 'voting-screen', 'votere
     }
 })();
 
+let currentScreen = 'home-screen';
 function switchScreen(screenId) {
+    currentScreen = screenId;
     SCREENS.forEach(id => $(id).classList.add('hidden'));
     $(screenId).classList.remove('hidden');
+    // Le bouton Quitter est dispo dès qu'on est dans une salle
+    $('leave-btn').classList.toggle('hidden', screenId === 'home-screen' || screenId === 'pseudo-screen');
     $('history-panel').classList.toggle('hidden', !WITH_HISTORY.includes(screenId));
 }
 
@@ -178,7 +182,8 @@ socket.on('roomClosed', () => {
     toast('La salle a été fermée.');
     resetToHome();
 });
-socket.on('leftRoom', () => resetToHome());
+socket.on('leftRoom', () => { if (currentRoomId) resetToHome(); });
+socket.on('playerLeft', (d) => toast(`🚪 ${d.name} a quitté la salle`));
 socket.on('errorMsg', (msg) => { justCreated = false; toast(msg); });
 
 function resetToHome() {
@@ -301,9 +306,23 @@ function submitPseudo() {
     if (pendingAction === 'create') { justCreated = true; socket.emit('createGame', data); }
     else if (pendingAction === 'join') socket.emit('joinGame', data);
 }
+const PLAYING_SCREENS = ['game-screen', 'decision-screen', 'voting-screen', 'voteresult-screen',
+    'white-guess-screen', 'wait-white-screen'];
+
+// Bouton « Quitter » : confirmation, puis retour à l'accueil (on peut recréer ou rejoindre une salle)
+function confirmLeave() {
+    const playing = PLAYING_SCREENS.includes(currentScreen) && !isSpectator && !isDead;
+    const msg = playing
+        ? 'Quitter la partie en cours ? Tu seras retiré de la partie (elle continue sans toi s\'il reste assez de joueurs).'
+        : 'Quitter la salle ?';
+    if (!confirm(msg)) return;
+    leaveRoom();
+}
 function leaveRoom() {
     store.del('imp_room');
     socket.emit('leaveRoom');
+    resetToHome();    // pas besoin d'attendre le serveur : on revient à l'accueil tout de suite
+    toast('Tu as quitté la salle. Tu peux en créer une nouvelle ou en rejoindre une autre.');
 }
 
 // ---------------------------------------------------------------------------
