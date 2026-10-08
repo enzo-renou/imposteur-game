@@ -1,140 +1,44 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
+const path = require('path');
 const crypto = require('crypto');
+const { Server } = require('socket.io');
+const WORDS = require('./words');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const games = {}; 
+// ---------------------------------------------------------------------------
+// CONSTANTES
+// ---------------------------------------------------------------------------
+// FAST_TEST=1 raccourcit tous les délais (utilisé uniquement par les tests automatiques)
+const FAST = process.env.FAST_TEST === '1';
+const ms = (n) => (FAST ? Math.max(30, Math.round(n / 20)) : n);
 
-// Liste des mots
-const wordPairs = [
-    { normal: "Sable", imposteur: "Gravier" }, { normal: "Pizza", imposteur: "Burger" },
-    { normal: "Banane", imposteur: "Pomme" }, { normal: "Thé", imposteur: "Café" },
-    { normal: "Chocolat", imposteur: "Vanille" }, { normal: "Crêpe", imposteur: "Gaufre" },
-    { normal: "Ketchup", imposteur: "Mayonnaise" }, { normal: "Pâtes", imposteur: "Riz" },
-    { normal: "Pain", imposteur: "Brioche" }, { normal: "Eau", imposteur: "Soda" },
-    { normal: "Vin", imposteur: "Bière" }, { normal: "Fraise", imposteur: "Framboise" },
-    { normal: "Orange", imposteur: "Clémentine" }, { normal: "Sel", imposteur: "Poivre" },
-    { normal: "Sucre", imposteur: "Farine" }, { normal: "Sushi", imposteur: "Maki" },
-    { normal: "Salade", imposteur: "Épinard" }, { normal: "Yaourt", imposteur: "Fromage blanc" },
-    { normal: "Poulet", imposteur: "Dinde" }, { normal: "Saumon", imposteur: "Thon" },
-    { normal: "Chips", imposteur: "Pop-corn" }, { normal: "Miel", imposteur: "Confiture" },
-    { normal: "Lait", imposteur: "Crème" }, { normal: "Oignon", imposteur: "Ail" },
-    { normal: "Citron", imposteur: "Pamplemousse" }, { normal: "Baguette", imposteur: "Croissant" },
-    { normal: "Tacos", imposteur: "Kebab" }, { normal: "Soupe", imposteur: "Bouillon" },
-    { normal: "Cookie", imposteur: "Brownie" }, { normal: "Melon", imposteur: "Pastèque" },
-    { normal: "Champagne", imposteur: "Cidre" }, { normal: "Oeuf", imposteur: "Omelette" },
-    { normal: "Lion", imposteur: "Tigre" }, { normal: "Chien", imposteur: "Loup" },
-    { normal: "Chat", imposteur: "Renard" }, { normal: "Cheval", imposteur: "Âne" },
-    { normal: "Aigle", imposteur: "Faucon" }, { normal: "Requin", imposteur: "Dauphin" },
-    { normal: "Abeille", imposteur: "Guêpe" }, { normal: "Mouche", imposteur: "Moustique" },
-    { normal: "Grenouille", imposteur: "Crapaud" }, { normal: "Poule", imposteur: "Canard" },
-    { normal: "Vache", imposteur: "Taureau" }, { normal: "Mouton", imposteur: "Chèvre" },
-    { normal: "Souris", imposteur: "Rat" }, { normal: "Lapin", imposteur: "Lièvre" },
-    { normal: "Serpent", imposteur: "Lézard" }, { normal: "Papillon", imposteur: "Libellule" },
-    { normal: "Ours", imposteur: "Panda" }, { normal: "Pingouin", imposteur: "Manchot" },
-    { normal: "Gorille", imposteur: "Chimpanzé" }, { normal: "Crocodile", imposteur: "Alligator" },
-    { normal: "Chameau", imposteur: "Dromadaire" }, { normal: "Fourmi", imposteur: "Araignée" },
-    { normal: "Hibou", imposteur: "Chouette" }, { normal: "Stylo", imposteur: "Crayon" },
-    { normal: "Chaise", imposteur: "Tabouret" }, { normal: "Table", imposteur: "Bureau" },
-    { normal: "Lit", imposteur: "Canapé" }, { normal: "Fourchette", imposteur: "Cuillère" },
-    { normal: "Assiette", imposteur: "Bol" }, { normal: "Verre", imposteur: "Tasse" },
-    { normal: "Lampe", imposteur: "Ampoule" }, { normal: "Porte", imposteur: "Fenêtre" },
-    { normal: "Clé", imposteur: "Serrure" }, { normal: "Tapis", imposteur: "Moquette" },
-    { normal: "Miroir", imposteur: "Vitre" }, { normal: "Savon", imposteur: "Shampoing" },
-    { normal: "Brosse à dents", imposteur: "Dentifrice" }, { normal: "Serviette", imposteur: "Gant" },
-    { normal: "Oreiller", imposteur: "Coussin" }, { normal: "Couette", imposteur: "Couverture" },
-    { normal: "Livre", imposteur: "Magazine" }, { normal: "Cahier", imposteur: "Feuille" },
-    { normal: "Ciseaux", imposteur: "Couteau" }, { normal: "Marteau", imposteur: "Tournevis" },
-    { normal: "Scie", imposteur: "Hache" }, { normal: "Valise", imposteur: "Sac à dos" },
-    { normal: "Parapluie", imposteur: "Imperméable" }, { normal: "Montre", imposteur: "Horloge" },
-    { normal: "Bague", imposteur: "Bracelet" }, { normal: "Collier", imposteur: "Écharpe" },
-    { normal: "Pantalon", imposteur: "Short" }, { normal: "T-shirt", imposteur: "Chemise" },
-    { normal: "Pull", imposteur: "Sweat" }, { normal: "Manteau", imposteur: "Veste" },
-    { normal: "Chaussette", imposteur: "Chaussure" }, { normal: "Botte", imposteur: "Basket" },
-    { normal: "Chapeau", imposteur: "Casquette" }, { normal: "Gants", imposteur: "Moufles" },
-    { normal: "Ceinture", imposteur: "Bretelles" }, { normal: "Pyjama", imposteur: "Robe de chambre" },
-    { normal: "Maillot de bain", imposteur: "Sous-vêtement" }, { normal: "Lunettes", imposteur: "Lentilles" },
-    { normal: "Avion", imposteur: "Hélicoptère" }, { normal: "Voiture", imposteur: "Camion" },
-    { normal: "Océan", imposteur: "Lac" }, { normal: "Train", imposteur: "Métro" },
-    { normal: "Bus", imposteur: "Tramway" }, { normal: "Vélo", imposteur: "Moto" },
-    { normal: "Bateau", imposteur: "Paquebot" }, { normal: "École", imposteur: "Collège" },
-    { normal: "Lycée", imposteur: "Université" }, { normal: "Cinéma", imposteur: "Théâtre" },
-    { normal: "Piscine", imposteur: "Plage" }, { normal: "Montagne", imposteur: "Colline" },
-    { normal: "Forêt", imposteur: "Jungle" }, { normal: "Rivière", imposteur: "Fleuve" },
-    { normal: "Ville", imposteur: "Village" }, { normal: "Maison", imposteur: "Appartement" },
-    { normal: "Chambre", imposteur: "Salon" }, { normal: "Cuisine", imposteur: "Salle de bain" },
-    { normal: "Pharmacie", imposteur: "Hôpital" }, { normal: "Boulangerie", imposteur: "Pâtisserie" },
-    { normal: "Restaurant", imposteur: "Cantine" }, { normal: "Parc", imposteur: "Jardin" },
-    { normal: "Pont", imposteur: "Tunnel" }, { normal: "Ascenseur", imposteur: "Escalier" },
-    { normal: "Piano", imposteur: "Guitare" }, { normal: "Tennis", imposteur: "Ping-Pong" },
-    { normal: "Ski", imposteur: "Snowboard" }, { normal: "Football", imposteur: "Rugby" },
-    { normal: "Basket", imposteur: "Handball" }, { normal: "Natation", imposteur: "Plongée" },
-    { normal: "Danse", imposteur: "Gymnastique" }, { normal: "Peinture", imposteur: "Dessin" },
-    { normal: "Cinéma", imposteur: "Netflix" }, { normal: "Jeux vidéo", imposteur: "Jeux de société" },
-    { normal: "Violon", imposteur: "Violoncelle" }, { normal: "Batterie", imposteur: "Tambour" },
-    { normal: "Flûte", imposteur: "Trompette" }, { normal: "Judo", imposteur: "Karaté" },
-    { normal: "Boxe", imposteur: "Lutte" }, { normal: "Surf", imposteur: "Skate" },
-    { normal: "Échecs", imposteur: "Dames" }, { normal: "Carte", imposteur: "Dé" },
-    { normal: "Téléphone", imposteur: "Tablette" }, { normal: "Ordinateur", imposteur: "Télévision" },
-    { normal: "Clavier", imposteur: "Souris" }, { normal: "Facebook", imposteur: "Instagram" },
-    { normal: "Twitter", imposteur: "TikTok" }, { normal: "Email", imposteur: "SMS" },
-    { normal: "Wifi", imposteur: "4G" }, { normal: "Chargeur", imposteur: "Batterie" },
-    { normal: "Photo", imposteur: "Vidéo" }, { normal: "Casque", imposteur: "Écouteurs" },
-    { normal: "Google", imposteur: "Wikipedia" }, { normal: "Apple", imposteur: "Samsung" },
-    { normal: "PlayStation", imposteur: "Xbox" }, { normal: "Soleil", imposteur: "Lune" },
-    { normal: "Pluie", imposteur: "Neige" }, { normal: "Nuage", imposteur: "Brouillard" },
-    { normal: "Vent", imposteur: "Tempête" }, { normal: "Feu", imposteur: "Fumée" },
-    { normal: "Glace", imposteur: "Eau" }, { normal: "Terre", imposteur: "Sable" },
-    { normal: "Pierre", imposteur: "Caillou" }, { normal: "Arbre", imposteur: "Buisson" },
-    { normal: "Fleur", imposteur: "Rose" }, { normal: "Herbe", imposteur: "Feuille" },
-    { normal: "Étoile", imposteur: "Planète" }, { normal: "Jour", imposteur: "Nuit" },
-    { normal: "Été", imposteur: "Hiver" }, { normal: "Printemps", imposteur: "Automne" },
-    { normal: "Main", imposteur: "Pied" }, { normal: "Doigt", imposteur: "Orteil" },
-    { normal: "Oeil", imposteur: "Oreille" }, { normal: "Nez", imposteur: "Bouche" },
-    { normal: "Dent", imposteur: "Langue" }, { normal: "Cheveux", imposteur: "Barbe" },
-    { normal: "Bras", imposteur: "Jambe" }, { normal: "Coude", imposteur: "Genou" },
-    { normal: "Coeur", imposteur: "Poumon" }, { normal: "Sang", imposteur: "Veine" },
-    { normal: "Docteur", imposteur: "Infirmier" }, { normal: "Policier", imposteur: "Pompier" },
-    { normal: "Professeur", imposteur: "Élève" }, { normal: "Boulanger", imposteur: "Cuisinier" },
-    { normal: "Chanteur", imposteur: "Acteur" }, { normal: "Juge", imposteur: "Avocat" },
-    { normal: "Soldat", imposteur: "Général" }, { normal: "Pilote", imposteur: "Chauffeur" },
-    { normal: "Amour", imposteur: "Amitié" }, { normal: "Joie", imposteur: "Bonheur" },
-    { normal: "Peur", imposteur: "Surprise" }, { normal: "Colère", imposteur: "Haine" },
-    { normal: "Rêve", imposteur: "Cauchemar" }, { normal: "Mensonge", imposteur: "Vérité" },
-    { normal: "Question", imposteur: "Réponse" }, { normal: "Début", imposteur: "Fin" },
-    { normal: "Guerre", imposteur: "Paix" }, { normal: "Travail", imposteur: "Vacances" },
-    { normal: "Mariage", imposteur: "Divorce" }, { normal: "Naître", imposteur: "Mourir" },
-    { normal: "Gagner", imposteur: "Perdre" }, { normal: "Donner", imposteur: "Recevoir" },
-    { normal: "Acheter", imposteur: "Vendre" }, { normal: "Parler", imposteur: "Crier" },
-    { normal: "Marcher", imposteur: "Courir" }
-];
+const MAX_PLAYERS = 12;
+const MAX_ROOMS = 300;
+const MAX_CUSTOM_PAIRS = 100;
+const GRACE_LOBBY = 30 * 1000;          // temps pour revenir après une déconnexion (lobby)
+const GRACE_GAME = 120 * 1000;          // idem en pleine partie
+const HOST_TRANSFER_DELAY = 10 * 1000;  // l'hôte déconnecté perd le rôle après ce délai
+const DISCONNECTED_TURN_TIME = 15;      // un joueur absent n'a que 15 s pour son tour
+const VOTE_RESULT_DELAY = 8 * 1000;     // durée d'affichage du résultat du vote
+const WHITE_GUESS_TIME = 30;
+const ROOM_IDLE_MS = 2 * 60 * 60 * 1000;   // salle sans aucune activité
+const ROOM_EMPTY_MS = 10 * 60 * 1000;      // salle sans personne de connecté
+const RATE_MAX = Number(process.env.RATE_MAX) || 40;   // événements max par socket et par fenêtre de 5 s
 
-app.use(express.static(__dirname));
+const TURN_TIMES = [30, 45, 60, 90, 120, 180];
+const VOTE_TIMES = [60, 90, 120, 180];
 
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-});
+const games = {};
 
-function generateRoomId() {
-    let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (let i = 0; i < 4; i++) {
-        result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
-}
+// ---------------------------------------------------------------------------
+// OUTILS
+// ---------------------------------------------------------------------------
+function randInt(max) { return crypto.randomInt(0, max); }
 
-// --- ALÉATOIRE ---
-// Nombre aléatoire cryptographique dans [0, max)
-function randInt(max) {
-    return crypto.randomInt(0, max);
-}
-
-// Mélange Fisher-Yates (non biaisé, contrairement à sort(() => Math.random() - 0.5))
 function shuffle(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = randInt(i + 1);
@@ -143,11 +47,141 @@ function shuffle(array) {
     return array;
 }
 
-// Tirage pondéré : moins un joueur a été imposteur, plus il a de chances de l'être.
-// Celui qui l'était à la partie précédente est fortement défavorisé (mais pas exclu,
-// pour que personne ne puisse deviner "ce n'est pas lui").
-function pickImpostors(game, count) {
-    const pool = [...game.players];
+function sanitize(str, maxLen) {
+    return String(str == null ? '' : str).replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, maxLen);
+}
+function sanitizePid(pid) {
+    pid = String(pid || '');
+    return /^[A-Za-z0-9_-]{8,64}$/.test(pid) ? pid : '';
+}
+function sanitizeAvatar(a) {
+    a = String(a || '');
+    return /^[A-Za-z0-9]{1,16}$/.test(a) ? a : 'default';
+}
+function normalizeString(str) {
+    return String(str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function generateRoomId() {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let result;
+    do {
+        result = '';
+        for (let i = 0; i < 4; i++) result += characters.charAt(randInt(characters.length));
+    } while (games[result]);
+    return result;
+}
+
+function emitTo(player, event, data) {
+    if (player && player.socketId && player.connected) io.to(player.socketId).emit(event, data);
+}
+function touch(game) { game.lastActivity = Date.now(); }
+
+// ---------------------------------------------------------------------------
+// PARTIES & JOUEURS
+// ---------------------------------------------------------------------------
+function defaultSettings() {
+    return {
+        turnTime: 90,
+        voteTime: 120,
+        impostors: 'auto',
+        mrWhite: true,
+        categories: Object.keys(WORDS)
+    };
+}
+
+function newGame(id) {
+    return {
+        id,
+        players: [],
+        phase: 'lobby',          // lobby | clues | decision | voting | voteResult | whiteGuess | result
+        gameActive: false,
+        settings: defaultSettings(),
+        customPairs: [],         // [[motCitoyens, motImposteur], ...]
+        currentTurn: 0,
+        votingVotes: {},         // pid votant -> pid cible
+        decisionVotes: {},       // pid -> 'vote' | 'cycle'
+        emergencyVotes: new Set(),
+        impostorIds: [],
+        whiteId: null,
+        currentPair: {},
+        order: [],
+        timer: null,
+        turnTimer: null,
+        pendingTimeout: null,
+        timeLeft: 0,
+        turnTimeLeft: 0,
+        roundCount: 0,
+        clueRound: 1,
+        gamesPlayed: 0,
+        usedPairs: new Set(),
+        wordHistory: {},
+        log: [],                 // historique des indices (pour la reconnexion)
+        lastVoteResult: null,
+        lastResult: null,
+        lastActivity: Date.now()
+    };
+}
+
+function isPlayable(p) { return p && p.alive && !p.left && !p.spectator; }
+function findByPid(game, pid) { return game.players.find(p => p.pid === pid); }
+function alivePlayers(game) { return game.players.filter(isPlayable); }
+function roleOf(game, p) {
+    if (game.impostorIds.includes(p.pid)) return 'impostor';
+    if (p.pid === game.whiteId) return 'white';
+    return 'citizen';
+}
+function wordFor(game, p) {
+    const r = roleOf(game, p);
+    if (r === 'impostor') return game.currentPair.imposteur;
+    if (r === 'white') return '???';
+    return game.currentPair.normal;
+}
+function emergencyThreshold(game) { return Math.floor(alivePlayers(game).length / 2) + 1; }
+
+function publicPlayers(game) {
+    return game.players.filter(p => !p.left).map(p => ({
+        id: p.pubId,
+        name: p.name,
+        avatar: p.avatar,
+        isAdmin: p.isAdmin,
+        connected: p.connected,
+        score: p.score,
+        spectator: p.spectator,
+        alive: p.alive
+    }));
+}
+function broadcastPlayers(game) { io.to(game.id).emit('updatePlayerList', publicPlayers(game)); }
+
+function categoryList(game) {
+    const list = Object.entries(WORDS).map(([key, c]) => ({ key, emoji: c.emoji, label: c.label, count: c.pairs.length }));
+    if (game.customPairs.length) list.push({ key: 'perso', emoji: '⭐', label: 'Mots perso', count: game.customPairs.length });
+    return list;
+}
+function settingsPayload(game) {
+    return { settings: game.settings, categoryList: categoryList(game), customCount: game.customPairs.length };
+}
+
+function voteData(game) {
+    return alivePlayers(game).map(p => {
+        const words = game.wordHistory[p.pid];
+        return { id: p.pubId, name: p.name, avatar: p.avatar, lastWord: words && words.length ? words[words.length - 1] : '...' };
+    });
+}
+function allVoted(game, votes) {
+    const voters = game.players.filter(p => isPlayable(p) && p.connected);
+    return voters.length > 0 && voters.every(p => votes[p.pid] !== undefined);
+}
+function voteProgress(game) {
+    const voters = game.players.filter(p => isPlayable(p) && p.connected);
+    return { done: voters.filter(p => game.votingVotes[p.pid] !== undefined).length, total: voters.length };
+}
+
+// ---------------------------------------------------------------------------
+// TIRAGES (imposteur, mots)
+// ---------------------------------------------------------------------------
+function pickImpostors(game, candidates, count) {
+    const pool = [...candidates];
     const chosen = [];
     for (let n = 0; n < count && pool.length > 0; n++) {
         const weights = pool.map(p => {
@@ -158,127 +192,682 @@ function pickImpostors(game, count) {
         const total = weights.reduce((a, b) => a + b, 0);
         let r = (randInt(1000000) / 1000000) * total;
         let idx = 0;
-        while (idx < pool.length - 1 && r >= weights[idx]) {
-            r -= weights[idx];
-            idx++;
-        }
+        while (idx < pool.length - 1 && r >= weights[idx]) { r -= weights[idx]; idx++; }
         chosen.push(pool[idx]);
         pool.splice(idx, 1);
     }
     return chosen;
 }
 
-// Choix d'une paire de mots sans répétition tant que toutes n'ont pas été jouées
+function buildPool(game) {
+    const entries = [];
+    const cats = game.settings.categories;
+    Object.entries(WORDS).forEach(([key, c]) => {
+        if (cats.includes(key)) c.pairs.forEach((pair, i) => entries.push({ key: key + ':' + i, a: pair[0], b: pair[1] }));
+    });
+    if (cats.includes('perso')) game.customPairs.forEach((pair, i) => entries.push({ key: 'perso:' + i + ':' + pair[0], a: pair[0], b: pair[1] }));
+    if (entries.length === 0) {
+        Object.entries(WORDS).forEach(([key, c]) => c.pairs.forEach((pair, i) => entries.push({ key: key + ':' + i, a: pair[0], b: pair[1] })));
+    }
+    return entries;
+}
+
 function pickWordPair(game) {
-    if (game.usedPairs.size >= wordPairs.length) game.usedPairs.clear();
-    let idx;
-    do { idx = randInt(wordPairs.length); } while (game.usedPairs.has(idx));
-    game.usedPairs.add(idx);
-    const pair = wordPairs[idx];
-    // 1 chance sur 2 d'inverser quel mot va aux citoyens / à l'imposteur
-    return randInt(2) === 0 ? { ...pair } : { normal: pair.imposteur, imposteur: pair.normal };
+    const pool = buildPool(game);
+    let fresh = pool.filter(e => !game.usedPairs.has(e.key));
+    if (fresh.length === 0) {
+        pool.forEach(e => game.usedPairs.delete(e.key));
+        fresh = pool;
+    }
+    const entry = fresh[randInt(fresh.length)];
+    game.usedPairs.add(entry.key);
+    return randInt(2) === 0 ? { normal: entry.a, imposteur: entry.b } : { normal: entry.b, imposteur: entry.a };
 }
 
-function sanitize(str, maxLen) {
-    return String(str || "").replace(/[<>]/g, "").trim().slice(0, maxLen);
+// ---------------------------------------------------------------------------
+// MINUTEURS
+// ---------------------------------------------------------------------------
+function clearTimers(game) {
+    if (game.timer) clearInterval(game.timer);
+    if (game.turnTimer) clearInterval(game.turnTimer);
+    if (game.pendingTimeout) clearTimeout(game.pendingTimeout);
+    game.timer = null; game.turnTimer = null; game.pendingTimeout = null;
 }
 
-function getAlivePlayers(game) {
-    return game.players.filter(p => p.alive);
+function startCountdown(game, seconds, eventName, onEnd) {
+    if (game.timer) clearInterval(game.timer);
+    game.timeLeft = seconds;
+    io.to(game.id).emit(eventName, game.timeLeft);
+    game.timer = setInterval(() => {
+        game.timeLeft--;
+        io.to(game.id).emit(eventName, game.timeLeft);
+        if (game.timeLeft <= 0) {
+            clearInterval(game.timer);
+            game.timer = null;
+            onEnd();
+        }
+    }, 1000);
 }
 
-function normalizeString(str) {
-    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+function startTurnTimer(game) {
+    if (game.turnTimer) clearInterval(game.turnTimer);
+    game.turnTimeLeft = game.settings.turnTime;
+    const cur = game.players[game.currentTurn];
+    if (cur && !cur.connected) game.turnTimeLeft = Math.min(game.turnTimeLeft, DISCONNECTED_TURN_TIME);
+    io.to(game.id).emit('turnTimerUpdate', game.turnTimeLeft);
+    game.turnTimer = setInterval(() => {
+        game.turnTimeLeft--;
+        io.to(game.id).emit('turnTimerUpdate', game.turnTimeLeft);
+        if (game.turnTimeLeft <= 0) {
+            clearInterval(game.turnTimer);
+            game.turnTimer = null;
+            const p = game.players[game.currentTurn];
+            if (p && game.phase === 'clues') handleWordSubmission(game, p, '...');
+        }
+    }, 1000);
 }
 
-io.on('connection', (socket) => {
-    
-    // --- 1. CRÉATION ---
-    socket.on('createGame', (data) => {
-        const username = sanitize(data.username, 12);
-        const avatar = data.avatar;
-        if (!username) return socket.emit('error', "Pseudo invalide !");
-        const roomId = generateRoomId();
-        
-        games[roomId] = {
-            id: roomId,
-            players: [],
-            currentTurn: 0,
-            votingVotes: {},     
-            decisionVotes: {},   
-            emergencyVotes: new Set(),
-            impostorIds: [],
-            whiteId: null,
-            currentPair: {},
-            timer: null,
-            turnTimer: null,
-            gameActive: false,
-            roundCount: 0,
-            clueRound: 1,
-            gamesPlayed: 0,
-            usedPairs: new Set(),
-            wordHistory: {} 
-        };
+// ---------------------------------------------------------------------------
+// SNAPSHOT (reconnexion / arrivée en cours de partie)
+// ---------------------------------------------------------------------------
+function buildSnapshot(game, p) {
+    const inGame = game.gameActive && p.inGame && !p.left;
+    const cur = game.players[game.currentTurn];
+    const white = findByPid(game, game.whiteId);
+    return {
+        roomId: game.id,
+        me: { id: p.pubId, name: p.name, isAdmin: p.isAdmin, alive: p.alive, spectator: p.spectator },
+        phase: game.phase,
+        players: publicPlayers(game),
+        settings: game.settings,
+        categoryList: categoryList(game),
+        customCount: game.customPairs.length,
+        customPairs: p.isAdmin ? game.customPairs : null,
+        gamesPlayed: game.gamesPlayed,
+        history: game.log,
+        clueRound: game.clueRound,
+        order: game.order,
+        word: inGame ? wordFor(game, p) : null,
+        isWhite: inGame && p.pid === game.whiteId,
+        currentPlayer: game.phase === 'clues' && cur ? { id: cur.pubId, name: cur.name } : null,
+        turnTimeLeft: game.turnTimeLeft,
+        timeLeft: game.timeLeft,
+        emergency: {
+            show: game.roundCount > 0,
+            count: game.emergencyVotes.size,
+            required: emergencyThreshold(game),
+            clicked: game.emergencyVotes.has(p.pid)
+        },
+        decisionAnswered: game.decisionVotes[p.pid] !== undefined,
+        voting: game.phase === 'voting'
+            ? { players: voteData(game), voted: game.votingVotes[p.pid] !== undefined, progress: voteProgress(game) }
+            : null,
+        whiteGuess: game.phase === 'whiteGuess' ? (p.pid === game.whiteId ? 'you' : 'wait') : null,
+        whiteName: white ? white.name : '',
+        voteResult: game.phase === 'voteResult' ? game.lastVoteResult : null,
+        result: game.phase === 'result' ? game.lastResult : null
+    };
+}
 
-        joinRoom(socket, roomId, username, avatar, true);
+// ---------------------------------------------------------------------------
+// HÔTE
+// ---------------------------------------------------------------------------
+function ensureHost(game) {
+    if (game.players.some(p => p.isAdmin && !p.left)) return false;
+    const next = game.players.find(p => !p.left && p.connected) || game.players.find(p => !p.left);
+    if (!next) return false;
+    next.isAdmin = true;
+    io.to(game.id).emit('hostChanged', { id: next.pubId, name: next.name });
+    emitTo(next, 'customPairsUpdated', game.customPairs);
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// DÉROULEMENT DU JEU
+// ---------------------------------------------------------------------------
+function startTurnPhase(game) {
+    game.phase = 'clues';
+    game.currentTurn = 0;
+    while (game.currentTurn < game.players.length && !isPlayable(game.players[game.currentTurn])) game.currentTurn++;
+}
+
+function handleWordSubmission(game, player, word) {
+    if (game.phase !== 'clues') return;
+    if (game.turnTimer) { clearInterval(game.turnTimer); game.turnTimer = null; }
+
+    const cleanWord = sanitize(word, 20) || '...';
+    game.wordHistory[player.pid].push(cleanWord);
+    const entry = {
+        round: game.clueRound,
+        name: player.name,
+        avatar: player.avatar,
+        word: cleanWord,
+        timedOut: cleanWord === '...'
+    };
+    game.log.push(entry);
+    io.to(game.id).emit('wordSubmitted', entry);
+    advanceTurn(game);
+}
+
+function advanceTurn(game) {
+    do { game.currentTurn++; }
+    while (game.currentTurn < game.players.length && !isPlayable(game.players[game.currentTurn]));
+
+    if (game.currentTurn >= game.players.length) return startDecisionPhase(game);
+    const cur = game.players[game.currentTurn];
+    io.to(game.id).emit('updateTurn', { id: cur.pubId, name: cur.name });
+    startTurnTimer(game);
+}
+
+function startDecisionPhase(game) {
+    game.phase = 'decision';
+    game.decisionVotes = {};
+    game.roundCount++;
+    io.to(game.id).emit('decisionPhaseStarted', { timer: 30 });
+    startCountdown(game, 30, 'timerUpdate', () => resolveDecision(game));
+}
+
+function resolveDecision(game) {
+    if (game.phase !== 'decision') return;
+    if (game.timer) { clearInterval(game.timer); game.timer = null; }
+    let votesForKick = 0, votesForCycle = 0;
+    Object.values(game.decisionVotes).forEach(v => {
+        if (v === 'vote') votesForKick++;
+        if (v === 'cycle') votesForCycle++;
     });
+    if (votesForKick > votesForCycle) startVotingPhase(game);
+    else startNewCycle(game, "La majorité veut refaire un tour d'indices !");
+}
 
-    // --- 2. REJOINDRE ---
-    socket.on('joinGame', (data) => {
-        const username = sanitize(data.username, 12);
-        let roomId = data.roomId;
-        const avatar = data.avatar;
-
-        if (!username) return socket.emit('error', "Pseudo invalide !");
-        if (!roomId) return socket.emit('error', "Code de salle manquant !");
-        roomId = roomId.toUpperCase(); 
-        
-        if (!games[roomId]) return socket.emit('error', "Cette salle n'existe pas !");
-        if (games[roomId].gameActive) return socket.emit('error', "La partie est déjà en cours !");
-        
-        const nameExists = games[roomId].players.some(p => p.name.toLowerCase() === username.toLowerCase());
-        if (nameExists) return socket.emit('error', "Ce pseudo est déjà pris dans cette salle !");
-
-        joinRoom(socket, roomId, username, avatar, false);
+function startNewCycle(game, message) {
+    clearTimers(game);
+    game.votingVotes = {};
+    game.decisionVotes = {};
+    game.emergencyVotes = new Set();
+    game.clueRound++;
+    startTurnPhase(game);
+    const cur = game.players[game.currentTurn];
+    io.to(game.id).emit('startNewCycle', {
+        nextPlayer: { id: cur.pubId, name: cur.name },
+        message,
+        showEmergency: game.roundCount > 0,
+        emergencyThreshold: emergencyThreshold(game),
+        clueRound: game.clueRound
     });
+    startTurnTimer(game);
+}
 
-    function joinRoom(socket, roomId, username, avatar, isAdmin) {
-        socket.join(roomId);
-        socket.roomId = roomId; 
-        socket.username = username;
+function startVotingPhase(game) {
+    if (game.turnTimer) { clearInterval(game.turnTimer); game.turnTimer = null; }
+    game.phase = 'voting';
+    game.votingVotes = {};
+    io.to(game.id).emit('votingStarted', { players: voteData(game), timer: game.settings.voteTime, progress: voteProgress(game) });
+    startCountdown(game, game.settings.voteTime, 'timerUpdate', () => finishVote(game));
+}
 
-        const game = games[roomId];
-        game.players.push({ 
-            id: socket.id, 
-            name: username, 
-            avatar: avatar, 
-            alive: true, 
-            isAdmin: isAdmin,
-            timesImpostor: 0,
-            lastImpostorGame: -1
-        });
+function finishVote(game) {
+    if (game.phase !== 'voting') return;
+    if (game.timer) { clearInterval(game.timer); game.timer = null; }
+    game.phase = 'voteResult';
 
-        game.wordHistory[socket.id] = [];
+    const tally = {};
+    const votes = [];
+    Object.entries(game.votingVotes).forEach(([voterPid, targetPid]) => {
+        const voter = findByPid(game, voterPid);
+        const target = findByPid(game, targetPid);
+        if (!voter || !target) return;
+        votes.push({ voter: { name: voter.name, avatar: voter.avatar }, target: { name: target.name, avatar: target.avatar } });
+        tally[targetPid] = (tally[targetPid] || 0) + 1;
+    });
+    const counts = Object.entries(tally)
+        .map(([pid, count]) => { const t = findByPid(game, pid); return { pid, id: t.pubId, name: t.name, avatar: t.avatar, count }; })
+        .sort((a, b) => b.count - a.count);
 
-        socket.emit('roomJoined', { roomId: roomId, isAdmin: isAdmin });
-        io.to(roomId).emit('updatePlayerList', game.players);
+    const max = counts.length ? counts[0].count : 0;
+    const top = counts.filter(c => c.count === max);
+    const tie = counts.length > 0 && top.length > 1;
+
+    let target = null;
+    let eliminated = null;
+    if (counts.length > 0 && !tie) {
+        target = findByPid(game, top[0].pid);
+        eliminated = { id: target.pubId, name: target.name, avatar: target.avatar, role: roleOf(game, target) };
     }
 
-    // --- 3. DÉMARRAGE ---
-    socket.on('startGame', () => {
+    const result = {
+        votes,
+        counts: counts.map(({ pid, ...rest }) => rest),
+        tie,
+        noVotes: counts.length === 0,
+        eliminated
+    };
+    game.lastVoteResult = result;
+    io.to(game.id).emit('voteResult', result);
+
+    game.pendingTimeout = setTimeout(() => afterVote(game, target), ms(eliminated ? VOTE_RESULT_DELAY : 5000));
+}
+
+function afterVote(game, target) {
+    game.pendingTimeout = null;
+    if (!game.gameActive) return;
+    if (!target) return startNewCycle(game, "Égalité ou aucun vote ! Personne n'est éliminé.");
+
+    target.alive = false;
+    broadcastPlayers(game);
+
+    if (target.pid === game.whiteId && !target.left) {
+        game.phase = 'whiteGuess';
+        game.players.forEach(p => {
+            if (p === target) emitTo(p, 'mrWhiteLastChance', { timer: WHITE_GUESS_TIME });
+            else emitTo(p, 'waitingForWhite', { name: target.name, timer: WHITE_GUESS_TIME });
+        });
+        startCountdown(game, WHITE_GUESS_TIME, 'whiteTimerUpdate', () => whiteGuessFailed(game, target, ''));
+        return;
+    }
+    emitTo(target, 'youAreDead');
+    continueEliminationLogic(game, target);
+}
+
+function whiteGuessFailed(game, whitePlayer, guess) {
+    if (game.phase !== 'whiteGuess') return;
+    if (game.timer) { clearInterval(game.timer); game.timer = null; }
+    io.to(game.id).emit('gameMessage', {
+        message: guess ? `M. White a proposé "${guess}"... et c'est RATÉ !` : "M. White n'a pas trouvé le mot (temps écoulé) !"
+    });
+    if (whitePlayer) emitTo(whitePlayer, 'youAreDead');
+    continueEliminationLogic(game, whitePlayer || { pid: game.whiteId, name: 'M. White' });
+}
+
+function checkWin(game) {
+    const aliveImpostors = game.players.filter(p => isPlayable(p) && game.impostorIds.includes(p.pid));
+    const aliveOthers = game.players.filter(p => isPlayable(p) && !game.impostorIds.includes(p.pid));
+    if (aliveImpostors.length === 0) return 'citizens';
+    if (aliveImpostors.length >= aliveOthers.length) return 'impostors';
+    return null;
+}
+
+function continueEliminationLogic(game, eliminated) {
+    const name = eliminated.name;
+    const winner = checkWin(game);
+    if (winner === 'citizens') {
+        return endGame(game, { winner, message: 'VICTOIRE DES CITOYENS ! Tous les imposteurs sont éliminés.', eliminatedName: name });
+    }
+    if (winner === 'impostors') {
+        return endGame(game, { winner, message: 'LES IMPOSTEURS ONT GAGNÉ ! (Majorité numérique)', eliminatedName: name });
+    }
+    if (game.impostorIds.includes(eliminated.pid)) {
+        return startNewCycle(game, `🔥 BRAVO ! ${name} était un IMPOSTEUR ! Mais attention, il n'est pas seul...`);
+    }
+    if (eliminated.pid === game.whiteId) {
+        return startNewCycle(game, `⚠️ C'ÉTAIT M. WHITE ! (${name} éliminé). Les imposteurs sont toujours là...`);
+    }
+    startNewCycle(game, `${name} a été éliminé... C'était un Citoyen !`);
+}
+
+function endGame(game, { winner, message, eliminatedName }) {
+    clearTimers(game);
+    game.gameActive = false;
+    game.phase = 'result';
+
+    const participants = game.players.filter(p => p.inGame);
+    const deltas = {};
+    participants.forEach(p => {
+        const role = roleOf(game, p);
+        let d = 0;
+        if (winner === 'citizens' && role === 'citizen') d = 2;
+        else if (winner === 'impostors' && role === 'impostor') d = 3;
+        else if (winner === 'white' && role === 'white') d = 4;
+        deltas[p.pid] = d;
+        p.score += d;
+    });
+
+    const roles = participants.map(p => ({
+        id: p.pubId, name: p.name, avatar: p.avatar,
+        role: roleOf(game, p), word: wordFor(game, p), alive: p.alive, left: p.left
+    }));
+    const winners = participants.filter(p => deltas[p.pid] > 0).map(p => p.pubId);
+    const impostorNames = participants.filter(p => game.impostorIds.includes(p.pid)).map(p => p.name).join(' & ');
+
+    // On nettoie : départs définitifs retirés, spectateurs deviennent joueurs
+    game.players = game.players.filter(p => !p.left);
+    Object.keys(game.wordHistory).forEach(pid => { if (!findByPid(game, pid)) delete game.wordHistory[pid]; });
+    game.players.forEach(p => { p.spectator = false; p.alive = true; p.inGame = false; });
+    ensureHost(game);
+
+    const scores = game.players
+        .map(p => ({ id: p.pubId, name: p.name, avatar: p.avatar, score: p.score, delta: deltas[p.pid] || 0 }))
+        .sort((a, b) => b.score - a.score);
+
+    const result = {
+        winner,
+        message,
+        impostor: impostorNames || 'N/A',
+        eliminated: eliminatedName || null,
+        roles,
+        winners,
+        scores,
+        pair: winner ? { normal: game.currentPair.normal, imposteur: game.currentPair.imposteur } : null
+    };
+    game.lastResult = result;
+    io.to(game.id).emit('gameResult', result);
+    broadcastPlayers(game);
+}
+
+// ---------------------------------------------------------------------------
+// DÉPARTS / DÉCONNEXIONS
+// ---------------------------------------------------------------------------
+function destroyGame(game) {
+    clearTimers(game);
+    game.players.forEach(p => { clearTimeout(p.graceTimer); clearTimeout(p.hostTimer); });
+    io.to(game.id).emit('roomClosed');
+    io.in(game.id).socketsLeave(game.id);
+    delete games[game.id];
+}
+
+function checkProgress(game) {
+    if (!game.gameActive) return;
+    switch (game.phase) {
+        case 'clues': {
+            const cur = game.players[game.currentTurn];
+            if (!cur || !isPlayable(cur)) {
+                if (game.turnTimer) { clearInterval(game.turnTimer); game.turnTimer = null; }
+                advanceTurn(game);
+            } else if (!cur.connected) {
+                game.turnTimeLeft = Math.min(game.turnTimeLeft, DISCONNECTED_TURN_TIME);
+            }
+            break;
+        }
+        case 'decision':
+            if (allVoted(game, game.decisionVotes)) resolveDecision(game);
+            break;
+        case 'voting':
+            if (allVoted(game, game.votingVotes)) finishVote(game);
+            else io.to(game.id).emit('voteProgress', voteProgress(game));
+            break;
+        case 'whiteGuess': {
+            const w = findByPid(game, game.whiteId);
+            if (!w || w.left) whiteGuessFailed(game, w, '');
+            break;
+        }
+    }
+}
+
+function removePlayerFinal(game, p) {
+    clearTimeout(p.graceTimer);
+    clearTimeout(p.hostTimer);
+    if (p.socketId) {
+        const s = io.sockets.sockets.get(p.socketId);
+        if (s && s.roomId === game.id) { s.leave(game.id); s.roomId = null; }
+    }
+    p.socketId = null;
+    p.connected = false;
+    const wasAdmin = p.isAdmin;
+
+    // Hors partie (ou simple spectateur) : on retire le joueur
+    if (!game.gameActive || !p.inGame) {
+        game.players = game.players.filter(x => x !== p);
+        delete game.wordHistory[p.pid];
+        if (game.players.length === 0) return destroyGame(game);
+        if (wasAdmin) ensureHost(game);
+        broadcastPlayers(game);
+        if (game.gameActive) checkProgress(game);
+        return;
+    }
+
+    // En pleine partie : le joueur est marqué "parti"
+    p.left = true;
+    p.alive = false;
+    p.isAdmin = false;
+    if (wasAdmin) ensureHost(game);
+
+    if (!game.players.some(x => !x.left)) return destroyGame(game);
+
+    const remaining = game.players.filter(x => x.inGame && !x.left);
+    if (remaining.length < 3) {
+        endGame(game, { winner: null, message: 'PARTIE INTERROMPUE ! Pas assez de joueurs.', eliminatedName: null });
+        return;
+    }
+    const winner = checkWin(game);
+    if (winner) {
+        endGame(game, {
+            winner,
+            message: winner === 'citizens'
+                ? `VICTOIRE DES CITOYENS ! (${p.name} a quitté la partie)`
+                : `LES IMPOSTEURS ONT GAGNÉ ! (${p.name} a quitté la partie)`,
+            eliminatedName: p.name
+        });
+        return;
+    }
+    broadcastPlayers(game);
+    checkProgress(game);
+}
+
+function evictPid(pid, exceptRoomId) {
+    Object.values(games).forEach(g => {
+        if (g.id === exceptRoomId) return;
+        const p = g.players.find(x => x.pid === pid && !x.left);
+        if (!p) return;
+        if (p.socketId) {
+            const s = io.sockets.sockets.get(p.socketId);
+            if (s) s.emit('sessionReplaced');
+        }
+        removePlayerFinal(g, p);
+    });
+}
+
+// ---------------------------------------------------------------------------
+// FICHIERS STATIQUES (uniquement le dossier public/ : le code serveur n'est plus exposé)
+// ---------------------------------------------------------------------------
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache');
+    }
+}));
+app.get('/healthz', (req, res) => res.send('ok'));
+
+// ---------------------------------------------------------------------------
+// SOCKET.IO
+// ---------------------------------------------------------------------------
+io.on('connection', (socket) => {
+    socket.rlStart = Date.now();
+    socket.rlCount = 0;
+
+    // Anti-spam : au-delà de RATE_MAX événements en 5 s, les paquets sont ignorés
+    socket.use((packet, next) => {
+        const now = Date.now();
+        if (now - socket.rlStart > 5000) { socket.rlStart = now; socket.rlCount = 0; }
+        if (++socket.rlCount > RATE_MAX) return;
+        next();
+    });
+
+    function fail(msg) { socket.emit('errorMsg', msg); }
+
+    function ctx() {
         const game = games[socket.roomId];
-        if (!game) return;
+        if (!game) return {};
+        const player = game.players.find(p => p.pid === socket.pid && !p.left);
+        if (!player || player.socketId !== socket.id) return {};
+        touch(game);
+        return { game, player };
+    }
 
-        const player = game.players.find(p => p.id === socket.id);
-        if (!player || !player.isAdmin) return;
-        
-        if (game.players.length < 3) return socket.emit('error', "Il faut au moins 3 joueurs !");
+    function attach(game, player) {
+        if (player.socketId && player.socketId !== socket.id) {
+            const old = io.sockets.sockets.get(player.socketId);
+            if (old) { old.roomId = null; old.leave(game.id); old.emit('sessionReplaced'); }
+        }
+        player.socketId = socket.id;
+        player.connected = true;
+        clearTimeout(player.graceTimer);
+        clearTimeout(player.hostTimer);
+        socket.join(game.id);
+        socket.roomId = game.id;
+        socket.pid = player.pid;
+    }
 
+    function joinRoom(game, info) {
+        const spectator = game.gameActive;
+        const p = {
+            pid: info.pid,
+            pubId: crypto.randomBytes(4).toString('hex'),
+            name: info.username,
+            avatar: info.avatar,
+            alive: !spectator,
+            isAdmin: info.isAdmin,
+            spectator,
+            inGame: false,
+            left: false,
+            connected: true,
+            socketId: null,
+            score: 0,
+            timesImpostor: 0,
+            lastImpostorGame: -1
+        };
+        game.players.push(p);
+        game.wordHistory[p.pid] = [];
+        attach(game, p);
+        touch(game);
+        socket.emit('syncState', buildSnapshot(game, p));
+        broadcastPlayers(game);
+        if (spectator) socket.emit('gameMessage', { message: '👁 Partie en cours : tu regardes en spectateur, tu joueras à la prochaine !' });
+    }
+
+    function leaveCurrent() {
+        const game = games[socket.roomId];
+        if (game) {
+            const p = game.players.find(x => x.pid === socket.pid && !x.left && x.socketId === socket.id);
+            if (p) removePlayerFinal(game, p);
+        }
+        if (socket.roomId) socket.leave(socket.roomId);
+        socket.roomId = null;
+    }
+
+    // --- Création -----------------------------------------------------------
+    socket.on('createGame', (data) => {
+        data = data || {};
+        const pid = sanitizePid(data.pid);
+        const username = sanitize(data.username, 12);
+        if (!pid) return fail('Identifiant invalide, recharge la page.');
+        if (!username) return fail('Pseudo invalide !');
+        if (Object.keys(games).length >= MAX_ROOMS) return fail('Le serveur est plein, réessaie plus tard.');
+
+        leaveCurrent();
+        evictPid(pid, null);
+
+        const game = newGame(generateRoomId());
+        games[game.id] = game;
+        joinRoom(game, { pid, username, avatar: sanitizeAvatar(data.avatar), isAdmin: true });
+    });
+
+    // --- Rejoindre ----------------------------------------------------------
+    socket.on('joinGame', (data) => {
+        data = data || {};
+        const pid = sanitizePid(data.pid);
+        const username = sanitize(data.username, 12);
+        const roomId = String(data.roomId || '').toUpperCase();
+        if (!pid) return fail('Identifiant invalide, recharge la page.');
+        if (!username) return fail('Pseudo invalide !');
+        if (!roomId) return fail('Code de salle manquant !');
+        const game = games[roomId];
+        if (!game) return fail("Cette salle n'existe pas !");
+
+        // Déjà dans cette salle avec le même identifiant : simple reprise de place
+        const existing = game.players.find(p => p.pid === pid && !p.left);
+        if (existing) {
+            attach(game, existing);
+            touch(game);
+            socket.emit('syncState', buildSnapshot(game, existing));
+            broadcastPlayers(game);
+            return;
+        }
+
+        if (game.players.filter(p => !p.left).length >= MAX_PLAYERS) return fail(`La salle est pleine (${MAX_PLAYERS} joueurs max) !`);
+        if (game.players.some(p => !p.left && p.name.toLowerCase() === username.toLowerCase())) {
+            return fail('Ce pseudo est déjà pris dans cette salle !');
+        }
+
+        leaveCurrent();
+        evictPid(pid, game.id);
+        joinRoom(game, { pid, username, avatar: sanitizeAvatar(data.avatar), isAdmin: false });
+    });
+
+    // --- Reconnexion --------------------------------------------------------
+    socket.on('rejoin', (data) => {
+        data = data || {};
+        const pid = sanitizePid(data.pid);
+        const game = games[String(data.roomId || '').toUpperCase()];
+        const p = game && pid ? game.players.find(x => x.pid === pid && !x.left) : null;
+        if (!p) return socket.emit('rejoinFailed');
+        attach(game, p);
+        touch(game);
+        socket.emit('syncState', buildSnapshot(game, p));
+        broadcastPlayers(game);
+        checkProgress(game);
+    });
+
+    socket.on('leaveRoom', () => {
+        leaveCurrent();
+        socket.emit('leftRoom');
+    });
+
+    // --- Réglages (hôte, dans le lobby) ---------------------------------------
+    socket.on('updateSettings', (input) => {
+        const { game, player } = ctx();
+        if (!game || !player.isAdmin || game.gameActive || !input) return;
+        const s = game.settings;
+        if (TURN_TIMES.includes(Number(input.turnTime))) s.turnTime = Number(input.turnTime);
+        if (VOTE_TIMES.includes(Number(input.voteTime))) s.voteTime = Number(input.voteTime);
+        if (input.impostors === 'auto') s.impostors = 'auto';
+        else if ([1, 2, 3].includes(Number(input.impostors))) s.impostors = Number(input.impostors);
+        if (typeof input.mrWhite === 'boolean') s.mrWhite = input.mrWhite;
+        if (Array.isArray(input.categories)) {
+            const valid = categoryList(game).map(c => c.key);
+            const cats = [...new Set(input.categories.filter(k => valid.includes(k)))];
+            if (cats.length) s.categories = cats;
+        }
+        io.to(game.id).emit('settingsUpdated', settingsPayload(game));
+    });
+
+    socket.on('setCustomPairs', (list) => {
+        const { game, player } = ctx();
+        if (!game || !player.isAdmin || game.gameActive || !Array.isArray(list)) return;
+        const seen = new Set();
+        const clean = [];
+        for (const item of list) {
+            const a = sanitize(Array.isArray(item) ? item[0] : item && item.a, 24);
+            const b = sanitize(Array.isArray(item) ? item[1] : item && item.b, 24);
+            if (!a || !b || normalizeString(a) === normalizeString(b)) continue;
+            const key = normalizeString(a) + '|' + normalizeString(b);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            clean.push([a, b]);
+            if (clean.length >= MAX_CUSTOM_PAIRS) break;
+        }
+        const hadPerso = game.customPairs.length > 0;
+        game.customPairs = clean;
+        const s = game.settings;
+        if (clean.length && !hadPerso && !s.categories.includes('perso')) s.categories.push('perso');
+        if (!clean.length) {
+            s.categories = s.categories.filter(k => k !== 'perso');
+            if (!s.categories.length) s.categories = Object.keys(WORDS);
+        }
+        io.to(game.id).emit('settingsUpdated', settingsPayload(game));
+        emitTo(player, 'customPairsUpdated', game.customPairs);
+    });
+
+    // --- Démarrage ------------------------------------------------------------
+    socket.on('startGame', () => {
+        const { game, player } = ctx();
+        if (!game || !player.isAdmin) return;
+        if (game.gameActive) return fail('La partie est déjà en cours !');
+
+        const participants = game.players.filter(p => !p.left);
+        if (participants.length < 3) return fail('Il faut au moins 3 joueurs !');
+        if (participants.some(p => !p.connected)) return fail('Un joueur est déconnecté, attends qu\'il revienne (ou qu\'il soit retiré).');
+
+        clearTimers(game);
         game.gameActive = true;
-        game.players.forEach(p => p.alive = true);
-        game.currentTurn = 0;
-        
-        // Reset
+        game.phase = 'clues';
         game.votingVotes = {};
         game.decisionVotes = {};
         game.emergencyVotes = new Set();
@@ -286,358 +875,134 @@ io.on('connection', (socket) => {
         game.whiteId = null;
         game.roundCount = 0;
         game.clueRound = 1;
-        Object.keys(game.wordHistory).forEach(key => game.wordHistory[key] = []);
+        game.log = [];
+        game.lastVoteResult = null;
+        game.lastResult = null;
+        participants.forEach(p => { p.alive = true; p.spectator = false; p.inGame = true; game.wordHistory[p.pid] = []; });
 
-        // Ordre de parole aléatoire à chaque partie (sinon l'hôte parle toujours en premier)
+        // Ordre de parole aléatoire à chaque partie
         shuffle(game.players);
-
+        game.order = game.players.map(p => p.name);
         game.currentPair = pickWordPair(game);
 
         // Rôles
-        const numberOfImpostors = game.players.length >= 6 ? 2 : 1;
-        const impostors = pickImpostors(game, numberOfImpostors);
+        const n = participants.length;
+        const maxImpostors = Math.max(1, Math.floor((n - 1) / 2));
+        const wanted = game.settings.impostors === 'auto' ? (n >= 6 ? 2 : 1) : game.settings.impostors;
+        const impostors = pickImpostors(game, participants, Math.min(wanted, maxImpostors));
         impostors.forEach(p => {
-            game.impostorIds.push(p.id);
+            game.impostorIds.push(p.pid);
             p.timesImpostor = (p.timesImpostor || 0) + 1;
             p.lastImpostorGame = game.gamesPlayed;
         });
-
-        const availablePlayers = game.players.filter(p => !game.impostorIds.includes(p.id));
-        if (game.players.length >= 5 && availablePlayers.length > 0) {
-            game.whiteId = availablePlayers[randInt(availablePlayers.length)].id;
+        const others = participants.filter(p => !game.impostorIds.includes(p.pid));
+        if (game.settings.mrWhite && n >= 5 && others.length > 0) {
+            game.whiteId = others[randInt(others.length)].pid;
         }
         game.gamesPlayed++;
 
-        game.players.forEach((p) => {
-            let word = "";
-            if (game.impostorIds.includes(p.id)) word = game.currentPair.imposteur;
-            else if (p.id === game.whiteId) word = "???"; 
-            else word = game.currentPair.normal;
-
-            io.to(p.id).emit('gameStarted', { 
-                word: word, 
-                currentPlayer: game.players[game.currentTurn].name,
-                order: game.players.map(pl => pl.name)
+        startTurnPhase(game);
+        const first = game.players[game.currentTurn];
+        game.players.forEach(p => {
+            emitTo(p, 'gameStarted', {
+                word: wordFor(game, p),
+                isWhite: p.pid === game.whiteId,
+                currentPlayer: { id: first.pubId, name: first.name },
+                order: game.order,
+                clueRound: 1
             });
         });
-
+        broadcastPlayers(game);
         startTurnTimer(game);
     });
 
-    function startTurnTimer(game) {
-        if (game.turnTimer) clearInterval(game.turnTimer);
-        
-        let timeLeft = 90; 
-        io.to(game.id).emit('turnTimerUpdate', timeLeft);
-        
-        game.turnTimer = setInterval(() => {
-            timeLeft--;
-            io.to(game.id).emit('turnTimerUpdate', timeLeft);
-            
-            if (timeLeft <= 0) {
-                clearInterval(game.turnTimer);
-                handleWordSubmission(game, game.players[game.currentTurn].id, "...");
-            }
-        }, 1000);
-    }
-
-    // --- 4. SOUMISSION DU MOT ---
+    // --- Indices ----------------------------------------------------------------
     socket.on('submitWord', (word) => {
-        const game = games[socket.roomId];
-        if (!game) return;
-        if (game.players[game.currentTurn].id !== socket.id) return;
-        handleWordSubmission(game, socket.id, word);
+        const { game, player } = ctx();
+        if (!game || game.phase !== 'clues') return;
+        if (game.players[game.currentTurn] !== player) return;
+        handleWordSubmission(game, player, word);
     });
-
-    function handleWordSubmission(game, playerId, word) {
-        if (game.turnTimer) clearInterval(game.turnTimer);
-
-        const cleanWord = sanitize(word, 20) || "...";
-        game.wordHistory[playerId].push(cleanWord);
-
-        // Diffusion en direct à toute la salle
-        const speaker = game.players.find(p => p.id === playerId);
-        io.to(game.id).emit('wordSubmitted', {
-            round: game.clueRound,
-            name: speaker ? speaker.name : "?",
-            avatar: speaker ? speaker.avatar : "",
-            word: cleanWord,
-            timedOut: cleanWord === "..."
-        });
-
-        do {
-            game.currentTurn++;
-        } while (game.currentTurn < game.players.length && !game.players[game.currentTurn].alive);
-
-        if (game.currentTurn >= game.players.length) {
-            startDecisionPhase(game);
-        } else {
-            io.to(game.id).emit('updateTurn', game.players[game.currentTurn].name);
-            startTurnTimer(game);
-        }
-    }
-
-    // --- 5. PHASE DE DÉCISION ---
-    function startDecisionPhase(game) {
-        game.decisionVotes = {};
-        game.roundCount++; 
-        
-        let timeLeft = 30;
-        io.to(game.id).emit('decisionPhaseStarted', { timer: timeLeft });
-
-        if (game.timer) clearInterval(game.timer);
-        game.timer = setInterval(() => {
-            timeLeft--;
-            io.to(game.id).emit('timerUpdate', timeLeft);
-            if (timeLeft <= 0) {
-                resolveDecision(game);
-            }
-        }, 1000);
-    }
 
     socket.on('submitDecision', (choice) => {
-        const game = games[socket.roomId];
-        if (!game) return;
-        game.decisionVotes[socket.id] = choice;
-        if (Object.keys(game.decisionVotes).length === getAlivePlayers(game).length) {
-            resolveDecision(game);
-        }
+        const { game, player } = ctx();
+        if (!game || game.phase !== 'decision' || !isPlayable(player)) return;
+        if (choice !== 'vote' && choice !== 'cycle') return;
+        game.decisionVotes[player.pid] = choice;
+        if (allVoted(game, game.decisionVotes)) resolveDecision(game);
     });
 
-    function resolveDecision(game) {
-        clearInterval(game.timer);
-        let votesForKick = 0;
-        let votesForCycle = 0;
-        Object.values(game.decisionVotes).forEach(v => {
-            if (v === 'vote') votesForKick++;
-            if (v === 'cycle') votesForCycle++;
-        });
-
-        if (votesForKick > votesForCycle) {
-            startVotingPhase(game);
-        } else {
-            startNewCycle(game, "La majorité veut refaire un tour d'indices !");
-        }
-    }
-
-    // --- 6. URGENCE ---
     socket.on('triggerEmergency', () => {
-        const game = games[socket.roomId];
-        if (!game) return;
-        game.emergencyVotes.add(socket.id);
-        const aliveCount = getAlivePlayers(game).length;
-        const threshold = Math.floor(aliveCount / 2) + 1;
-
-        io.to(game.id).emit('updateEmergencyState', { 
-            count: game.emergencyVotes.size, 
-            required: threshold 
-        });
-
-        if (game.emergencyVotes.size >= threshold) {
-            if (game.turnTimer) clearInterval(game.turnTimer);
-            startVotingPhase(game);
-        }
+        const { game, player } = ctx();
+        if (!game || game.phase !== 'clues' || game.roundCount < 1 || !isPlayable(player)) return;
+        game.emergencyVotes.add(player.pid);
+        const threshold = emergencyThreshold(game);
+        io.to(game.id).emit('updateEmergencyState', { count: game.emergencyVotes.size, required: threshold });
+        if (game.emergencyVotes.size >= threshold) startVotingPhase(game);
     });
 
-    // --- 7. CYCLE & VOTE ---
-
-    function startNewCycle(game, message) {
-        game.votingVotes = {};
-        game.decisionVotes = {};
-        game.emergencyVotes = new Set();
-        game.clueRound++;
-        
-        game.currentTurn = 0;
-        while (game.currentTurn < game.players.length && !game.players[game.currentTurn].alive) {
-            game.currentTurn++;
-        }
-        
-        const aliveCount = getAlivePlayers(game).length;
-        const threshold = Math.floor(aliveCount / 2) + 1;
-
-        io.to(game.id).emit('startNewCycle', { 
-            nextPlayer: game.players[game.currentTurn].name,
-            message: message,
-            showEmergency: game.roundCount > 0,
-            emergencyThreshold: threshold,
-            roundNumber: game.roundCount,
-            clueRound: game.clueRound
-        });
-
-        startTurnTimer(game);
-    }
-
-    function startVotingPhase(game) {
-        game.votingVotes = {};
-        let timeLeft = 120; // 2 Minutes
-        const alivePlayers = getAlivePlayers(game);
-        
-        const voteData = alivePlayers.map(p => {
-            const words = game.wordHistory[p.id];
-            const lastWord = words && words.length > 0 ? words[words.length - 1] : "...";
-            return { 
-                id: p.id, 
-                name: p.name, 
-                avatar: p.avatar,
-                lastWord: lastWord
-            };
-        });
-        
-        io.to(game.id).emit('votingStarted', { players: voteData, timer: timeLeft });
-
-        if (game.timer) clearInterval(game.timer);
-        game.timer = setInterval(() => {
-            timeLeft--;
-            io.to(game.id).emit('timerUpdate', timeLeft);
-            if (timeLeft <= 0) {
-                finishVote(game);
-            }
-        }, 1000);
-    }
-
-    socket.on('castVote', (targetName) => {
-        const game = games[socket.roomId];
-        if (!game) return;
-        game.votingVotes[socket.id] = targetName;
-        if (Object.keys(game.votingVotes).length === getAlivePlayers(game).length) {
-            finishVote(game);
-        }
+    socket.on('castVote', (targetId) => {
+        const { game, player } = ctx();
+        if (!game || game.phase !== 'voting' || !isPlayable(player)) return;
+        const target = game.players.find(p => p.pubId === String(targetId) && isPlayable(p));
+        if (!target || target === player) return;
+        game.votingVotes[player.pid] = target.pid;
+        if (allVoted(game, game.votingVotes)) finishVote(game);
+        else io.to(game.id).emit('voteProgress', voteProgress(game));
     });
 
-    // --- 8. LOGIQUE M. BLANC ---
     socket.on('mrWhiteGuess', (guess) => {
-        const game = games[socket.roomId];
-        if (!game) return;
-        if (socket.id !== game.whiteId) return;
+        const { game, player } = ctx();
+        if (!game || game.phase !== 'whiteGuess' || player.pid !== game.whiteId) return;
+        const cleanGuess = sanitize(guess, 40);
+        if (!cleanGuess) return;
+        if (game.timer) { clearInterval(game.timer); game.timer = null; }
 
-        const correctWord = normalizeString(game.currentPair.normal);
-        const playerGuess = normalizeString(guess);
-        const whitePlayer = game.players.find(p => p.id === game.whiteId);
-
-        // Récupérer les noms des imposteurs pour l'affichage
-        const allImpostorNames = game.players
-            .filter(p => game.impostorIds.includes(p.id))
-            .map(p => p.name).join(' & ');
-
-        if (correctWord === playerGuess) {
-            game.gameActive = false;
-            // VICTOIRE MR WHITE
-            io.to(game.id).emit('gameResult', { 
-                winner: 'white',
-                message: "M. WHITE A TROUVÉ LE MOT ! 😱 Il vole la victoire !",
-                impostor: allImpostorNames, // On affiche les vrais imposteurs
-                eliminated: whitePlayer.name // On affiche Mr Blanc comme "joueur clé"
-            });
+        if (normalizeString(game.currentPair.normal) === normalizeString(cleanGuess)) {
+            endGame(game, { winner: 'white', message: 'M. WHITE A TROUVÉ LE MOT ! 😱 Il vole la victoire !', eliminatedName: player.name });
         } else {
-            io.to(game.id).emit('gameMessage', { message: `M. White a proposé "${guess}"... et c'est RATÉ !` });
-            whitePlayer.alive = false;
-            io.to(whitePlayer.id).emit('youAreDead');
-            continueEliminationLogic(game, whitePlayer, whitePlayer.name);
+            whiteGuessFailed(game, player, cleanGuess);
         }
     });
 
-    function finishVote(game) {
-        clearInterval(game.timer);
-        let counts = {};
-        Object.values(game.votingVotes).forEach(name => counts[name] = (counts[name] || 0) + 1);
-
-        let eliminatedName = "";
-        let maxVotes = 0;
-        let equality = false;
-
-        for (let name in counts) {
-            if (counts[name] > maxVotes) {
-                maxVotes = counts[name];
-                eliminatedName = name;
-                equality = false;
-            } else if (counts[name] === maxVotes) {
-                equality = true;
-            }
-        }
-
-        if (equality || maxVotes === 0) {
-            startNewCycle(game, "Égalité ou aucun vote ! Personne n'est éliminé.");
-            return;
-        }
-
-        const eliminatedPlayer = game.players.find(p => p.name === eliminatedName);
-        if (!eliminatedPlayer) return startNewCycle(game, "Erreur lors du vote.");
-
-        if (eliminatedPlayer.id === game.whiteId) {
-            io.to(eliminatedPlayer.id).emit('mrWhiteLastChance');
-            eliminatedPlayer.alive = false;
-            io.to(game.id).emit('waitingForWhite', { name: eliminatedName });
-            return;
-        }
-
-        eliminatedPlayer.alive = false; 
-        io.to(eliminatedPlayer.id).emit('youAreDead');
-        continueEliminationLogic(game, eliminatedPlayer, eliminatedName);
-    }
-
-    function continueEliminationLogic(game, eliminatedPlayer, eliminatedName) {
-        const aliveImpostors = game.players.filter(p => p.alive && game.impostorIds.includes(p.id));
-        const aliveOthers = game.players.filter(p => p.alive && !game.impostorIds.includes(p.id));
-        
-        const allImpostorNames = game.players
-            .filter(p => game.impostorIds.includes(p.id))
-            .map(p => p.name).join(' & ');
-
-        if (aliveImpostors.length === 0) {
-            game.gameActive = false;
-            io.to(game.id).emit('gameResult', { 
-                winner: 'citizens',
-                message: "VICTOIRE DES CITOYENS ! Tous les imposteurs sont éliminés.",
-                impostor: allImpostorNames,
-                eliminated: eliminatedName
-            });
-            return;
-        }
-
-        if (aliveImpostors.length >= aliveOthers.length) {
-            game.gameActive = false;
-            io.to(game.id).emit('gameResult', { 
-                winner: 'impostors',
-                message: "LES IMPOSTEURS ONT GAGNÉ ! (Majorité numérique)",
-                impostor: allImpostorNames,
-                eliminated: eliminatedName
-            });
-            return;
-        }
-
-        if (game.impostorIds.includes(eliminatedPlayer.id)) {
-            startNewCycle(game, `🔥 BRAVO ! ${eliminatedName} était un IMPOSTEUR ! Mais attention, il n'est pas seul...`);
-            return;
-        }
-
-        if (eliminatedPlayer.id === game.whiteId) {
-             startNewCycle(game, `⚠️ C'ÉTAIT M. WHITE ! (${eliminatedName} éliminé). Les imposteurs sont toujours là...`);
-             return;
-        }
-
-        startNewCycle(game, `${eliminatedName} a été éliminé... C'était un Citoyen !`);
-    }
-
+    // --- Déconnexion ----------------------------------------------------------
     socket.on('disconnect', () => {
-        const roomId = socket.roomId;
-        if (!roomId || !games[roomId]) return;
-        const game = games[roomId];
-        game.players = game.players.filter(p => p.id !== socket.id);
-        if (game.players.length === 0) {
-            if (game.timer) clearInterval(game.timer);
-            if (game.turnTimer) clearInterval(game.turnTimer);
-            delete games[roomId];
-            return;
+        const game = games[socket.roomId];
+        if (!game) return;
+        const p = game.players.find(x => x.pid === socket.pid && !x.left);
+        if (!p || p.socketId !== socket.id) return;
+
+        p.connected = false;
+        p.socketId = null;
+        const grace = game.gameActive && p.inGame ? GRACE_GAME : GRACE_LOBBY;
+        p.graceTimer = setTimeout(() => { if (!p.connected) removePlayerFinal(game, p); }, ms(grace));
+        if (p.isAdmin) {
+            p.hostTimer = setTimeout(() => {
+                if (p.connected || p.left) return;
+                if (!game.players.some(x => x !== p && !x.left && x.connected)) return;
+                p.isAdmin = false;
+                ensureHost(game);
+                broadcastPlayers(game);
+            }, ms(HOST_TRANSFER_DELAY));
         }
-        if (game.gameActive) {
-            game.gameActive = false;
-            io.to(game.id).emit('gameResult', { success: true, message: "PARTIE INTERROMPUE ! Abandon.", impostor: "N/A" });
-        }
-        io.to(game.id).emit('updatePlayerList', game.players);
+        touch(game);
+        broadcastPlayers(game);
+        checkProgress(game);
     });
 });
 
-// On utilise process.env.PORT (donné par l'hébergeur) ou 3000 (sur ton PC)
+// ---------------------------------------------------------------------------
+// NETTOYAGE DES SALLES ABANDONNÉES
+// ---------------------------------------------------------------------------
+setInterval(() => {
+    const now = Date.now();
+    Object.values(games).forEach(game => {
+        const anyConnected = game.players.some(p => p.connected);
+        const idle = now - game.lastActivity;
+        if ((!anyConnected && idle > ROOM_EMPTY_MS) || idle > ROOM_IDLE_MS) destroyGame(game);
+    });
+}, 60 * 1000).unref();
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Serveur lancé sur le port ${PORT}`);
