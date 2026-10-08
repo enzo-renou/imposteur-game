@@ -7,6 +7,72 @@ let pendingAction = "";
 let pendingRoomCode = "";
 let myRole = ""; // "white", "impostor", "citizen"
 
+// --- UTILITAIRES SÉCURITÉ ---
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// --- HISTORIQUE DES MOTS ---
+function resetHistory() {
+    document.getElementById('history-list').innerHTML = "";
+}
+
+// Crée (si besoin) le bloc "Tour N" et le marque comme tour en cours
+function ensureRound(round) {
+    const list = document.getElementById('history-list');
+    list.querySelectorAll('.history-round').forEach(el => el.classList.remove('current'));
+    let block = document.getElementById('history-round-' + round);
+    if (!block) {
+        block = document.createElement('div');
+        block.id = 'history-round-' + round;
+        block.className = 'history-round';
+        const title = document.createElement('div');
+        title.className = 'history-round-title';
+        title.textContent = 'Tour ' + round;
+        block.appendChild(title);
+        list.appendChild(block);
+    }
+    block.classList.add('current');
+    return block;
+}
+
+function addHistoryEntry(d) {
+    const block = ensureRound(d.round);
+    const line = document.createElement('div');
+    line.className = 'history-line';
+
+    const img = document.createElement('img');
+    img.src = d.avatar || "";
+    img.alt = "";
+
+    const text = document.createElement('span');
+    const name = document.createElement('strong');
+    name.textContent = d.name;
+    text.appendChild(name);
+
+    if (d.timedOut) {
+        const silent = document.createElement('span');
+        silent.className = 'history-silent';
+        silent.textContent = " n'a rien dit (temps écoulé)";
+        text.appendChild(silent);
+    } else {
+        text.appendChild(document.createTextNode(' a dit '));
+        const word = document.createElement('span');
+        word.className = 'history-word';
+        word.textContent = '« ' + d.word + ' »';
+        text.appendChild(word);
+    }
+
+    line.appendChild(img);
+    line.appendChild(text);
+    block.appendChild(line);
+
+    const list = document.getElementById('history-list');
+    list.scrollTop = list.scrollHeight;
+}
+
+socket.on('wordSubmitted', addHistoryEntry);
+
 // --- INITIALISATION ---
 window.onload = () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -82,8 +148,8 @@ socket.on('updatePlayerList', (playersList) => {
     }
     list.innerHTML = playersList.map(p => {
         return `<div class="player-card ${p.isAdmin ? "admin" : ""}">
-            <img src="${p.avatar}" alt="avatar">
-            <span class="name">${p.isAdmin ? "👑 " : ""}${p.name}</span>
+            <img src="${escapeHtml(p.avatar)}" alt="avatar">
+            <span class="name">${p.isAdmin ? "👑 " : ""}${escapeHtml(p.name)}</span>
         </div>`;
     }).join('');
 });
@@ -91,8 +157,15 @@ socket.on('updatePlayerList', (playersList) => {
 // --- JEU ---
 socket.on('gameStarted', (data) => {
     resetUI();
+    resetHistory();
+    ensureRound(1);
     switchScreen('game-screen');
     document.getElementById('role-display').innerText = data.word;
+    const orderInfo = document.getElementById('order-info');
+    if (data.order) {
+        orderInfo.textContent = 'Ordre de parole : ' + data.order.join(' → ');
+        orderInfo.classList.remove('hidden');
+    }
     document.getElementById('emergency-container').classList.add('hidden');
     
     // Détection du rôle local
@@ -117,7 +190,7 @@ function updateTurnUI(currentPlayerName) {
         document.getElementById('game-word-input').focus();
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     } else {
-        turnInfo.innerHTML = `C'est au tour de <strong>${currentPlayerName}</strong> d'écrire...`;
+        turnInfo.innerHTML = `C'est au tour de <strong>${escapeHtml(currentPlayerName)}</strong> d'écrire...`;
         turnInfo.style.color = "var(--primary-color)";
         inputArea.classList.add('hidden');
     }
@@ -137,6 +210,7 @@ function submitWord() {
 // --- NOUVEAU CYCLE (Indices) ---
 socket.on('startNewCycle', (data) => {
     switchScreen('game-screen');
+    if (data.clueRound) ensureRound(data.clueRound);
     if(data.message) {
          const msg = document.getElementById('game-message'); 
          msg.innerText = data.message; msg.classList.remove('hidden'); 
@@ -187,8 +261,8 @@ socket.on('votingStarted', (data) => {
         const btn = document.createElement('button');
         btn.className = "candidate-btn secondary-btn";
         btn.innerHTML = `
-            <div><img src="${p.avatar}" style="width:30px; height:30px; vertical-align:middle; border-radius:50%; margin-right:5px;">${p.name}</div>
-            <div class="last-word-display">"${p.lastWord}"</div>
+            <div><img src="${escapeHtml(p.avatar)}" style="width:30px; height:30px; vertical-align:middle; border-radius:50%; margin-right:5px;">${escapeHtml(p.name)}</div>
+            <div class="last-word-display">"${escapeHtml(p.lastWord)}"</div>
         `;
         btn.onclick = () => submitVote(p.name);
         list.appendChild(btn);
@@ -259,13 +333,13 @@ socket.on('gameResult', (data) => {
          confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
     }
 
-    let resText = `<strong>${data.message}</strong><br><br>`;
-    resText += `🕵️ Imposteur(s) : <strong>${data.impostor}</strong>`;
-    if(data.eliminated) resText += `<br>⚰️ Dernier éliminé : ${data.eliminated}`;
+    let resText = `<strong>${escapeHtml(data.message)}</strong><br><br>`;
+    resText += `🕵️ Imposteur(s) : <strong>${escapeHtml(data.impostor)}</strong>`;
+    if(data.eliminated) resText += `<br>⚰️ Dernier éliminé : ${escapeHtml(data.eliminated)}`;
     
     turnInfo.innerHTML = resText;
     
-    setTimeout(() => { switchScreen('lobby'); document.getElementById('start-btn').innerText = "Rejouer ?"; }, 8000); 
+    setTimeout(() => { switchScreen('lobby'); document.getElementById('start-btn').innerText = "Rejouer ?"; }, 15000); 
 });
 
 // --- UTILS ---
@@ -273,6 +347,8 @@ function switchScreen(screenId) {
     const ids = ['home-screen', 'pseudo-screen', 'lobby', 'game-screen', 'voting-screen', 'decision-screen', 'white-guess-screen', 'wait-white-screen'];
     ids.forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById(screenId).classList.remove('hidden');
+    const showHistory = ['game-screen', 'decision-screen', 'voting-screen'].includes(screenId);
+    document.getElementById('history-panel').classList.toggle('hidden', !showHistory);
 }
 function toggleRules() { document.getElementById('rules-modal').classList.toggle('hidden'); }
 socket.on('youAreDead', () => {

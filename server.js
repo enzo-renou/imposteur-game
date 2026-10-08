@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
@@ -127,6 +128,61 @@ function generateRoomId() {
     return result;
 }
 
+// --- ALÉATOIRE ---
+// Nombre aléatoire cryptographique dans [0, max)
+function randInt(max) {
+    return crypto.randomInt(0, max);
+}
+
+// Mélange Fisher-Yates (non biaisé, contrairement à sort(() => Math.random() - 0.5))
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = randInt(i + 1);
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// Tirage pondéré : moins un joueur a été imposteur, plus il a de chances de l'être.
+// Celui qui l'était à la partie précédente est fortement défavorisé (mais pas exclu,
+// pour que personne ne puisse deviner "ce n'est pas lui").
+function pickImpostors(game, count) {
+    const pool = [...game.players];
+    const chosen = [];
+    for (let n = 0; n < count && pool.length > 0; n++) {
+        const weights = pool.map(p => {
+            let w = 1 / Math.pow(1 + (p.timesImpostor || 0), 2);
+            if (p.lastImpostorGame === game.gamesPlayed - 1) w *= 0.25;
+            return w;
+        });
+        const total = weights.reduce((a, b) => a + b, 0);
+        let r = (randInt(1000000) / 1000000) * total;
+        let idx = 0;
+        while (idx < pool.length - 1 && r >= weights[idx]) {
+            r -= weights[idx];
+            idx++;
+        }
+        chosen.push(pool[idx]);
+        pool.splice(idx, 1);
+    }
+    return chosen;
+}
+
+// Choix d'une paire de mots sans répétition tant que toutes n'ont pas été jouées
+function pickWordPair(game) {
+    if (game.usedPairs.size >= wordPairs.length) game.usedPairs.clear();
+    let idx;
+    do { idx = randInt(wordPairs.length); } while (game.usedPairs.has(idx));
+    game.usedPairs.add(idx);
+    const pair = wordPairs[idx];
+    // 1 chance sur 2 d'inverser quel mot va aux citoyens / à l'imposteur
+    return randInt(2) === 0 ? { ...pair } : { normal: pair.imposteur, imposteur: pair.normal };
+}
+
+function sanitize(str, maxLen) {
+    return String(str || "").replace(/[<>]/g, "").trim().slice(0, maxLen);
+}
+
 function getAlivePlayers(game) {
     return game.players.filter(p => p.alive);
 }
@@ -139,8 +195,9 @@ io.on('connection', (socket) => {
     
     // --- 1. CRÉATION ---
     socket.on('createGame', (data) => {
-        const username = data.username;
+        const username = sanitize(data.username, 12);
         const avatar = data.avatar;
+        if (!username) return socket.emit('error', "Pseudo invalide !");
         const roomId = generateRoomId();
         
         games[roomId] = {
@@ -157,6 +214,9 @@ io.on('connection', (socket) => {
             turnTimer: null,
             gameActive: false,
             roundCount: 0,
+            clueRound: 1,
+            gamesPlayed: 0,
+            usedPairs: new Set(),
             wordHistory: {} 
         };
 
@@ -165,10 +225,11 @@ io.on('connection', (socket) => {
 
     // --- 2. REJOINDRE ---
     socket.on('joinGame', (data) => {
-        const username = data.username;
+        const username = sanitize(data.username, 12);
         let roomId = data.roomId;
         const avatar = data.avatar;
 
+        if (!username) return socket.emit('error', "Pseudo invalide !");
         if (!roomId) return socket.emit('error', "Code de salle manquant !");
         roomId = roomId.toUpperCase(); 
         
@@ -192,7 +253,9 @@ io.on('connection', (socket) => {
             name: username, 
             avatar: avatar, 
             alive: true, 
-            isAdmin: isAdmin 
+            isAdmin: isAdmin,
+            timesImpostor: 0,
+            lastImpostorGame: -1
         });
 
         game.wordHistory[socket.id] = [];
@@ -222,24 +285,28 @@ io.on('connection', (socket) => {
         game.impostorIds = [];
         game.whiteId = null;
         game.roundCount = 0;
+        game.clueRound = 1;
         Object.keys(game.wordHistory).forEach(key => game.wordHistory[key] = []);
 
-        game.currentPair = wordPairs[Math.floor(Math.random() * wordPairs.length)];
-        
+        // Ordre de parole aléatoire à chaque partie (sinon l'hôte parle toujours en premier)
+        shuffle(game.players);
+
+        game.currentPair = pickWordPair(game);
+
         // Rôles
-        let availablePlayers = [...game.players];
         const numberOfImpostors = game.players.length >= 6 ? 2 : 1;
+        const impostors = pickImpostors(game, numberOfImpostors);
+        impostors.forEach(p => {
+            game.impostorIds.push(p.id);
+            p.timesImpostor = (p.timesImpostor || 0) + 1;
+            p.lastImpostorGame = game.gamesPlayed;
+        });
 
-        for (let i = 0; i < numberOfImpostors; i++) {
-            const randomIndex = Math.floor(Math.random() * availablePlayers.length);
-            game.impostorIds.push(availablePlayers[randomIndex].id);
-            availablePlayers.splice(randomIndex, 1);
-        }
-
+        const availablePlayers = game.players.filter(p => !game.impostorIds.includes(p.id));
         if (game.players.length >= 5 && availablePlayers.length > 0) {
-            const whiteIndex = Math.floor(Math.random() * availablePlayers.length);
-            game.whiteId = availablePlayers[whiteIndex].id;
+            game.whiteId = availablePlayers[randInt(availablePlayers.length)].id;
         }
+        game.gamesPlayed++;
 
         game.players.forEach((p) => {
             let word = "";
@@ -249,7 +316,8 @@ io.on('connection', (socket) => {
 
             io.to(p.id).emit('gameStarted', { 
                 word: word, 
-                currentPlayer: game.players[game.currentTurn].name 
+                currentPlayer: game.players[game.currentTurn].name,
+                order: game.players.map(pl => pl.name)
             });
         });
 
@@ -284,8 +352,18 @@ io.on('connection', (socket) => {
     function handleWordSubmission(game, playerId, word) {
         if (game.turnTimer) clearInterval(game.turnTimer);
 
-        const cleanWord = word && word.trim() !== "" ? word.trim() : "...";
+        const cleanWord = sanitize(word, 20) || "...";
         game.wordHistory[playerId].push(cleanWord);
+
+        // Diffusion en direct à toute la salle
+        const speaker = game.players.find(p => p.id === playerId);
+        io.to(game.id).emit('wordSubmitted', {
+            round: game.clueRound,
+            name: speaker ? speaker.name : "?",
+            avatar: speaker ? speaker.avatar : "",
+            word: cleanWord,
+            timedOut: cleanWord === "..."
+        });
 
         do {
             game.currentTurn++;
@@ -367,6 +445,7 @@ io.on('connection', (socket) => {
         game.votingVotes = {};
         game.decisionVotes = {};
         game.emergencyVotes = new Set();
+        game.clueRound++;
         
         game.currentTurn = 0;
         while (game.currentTurn < game.players.length && !game.players[game.currentTurn].alive) {
@@ -381,7 +460,8 @@ io.on('connection', (socket) => {
             message: message,
             showEmergency: game.roundCount > 0,
             emergencyThreshold: threshold,
-            roundNumber: game.roundCount
+            roundNumber: game.roundCount,
+            clueRound: game.clueRound
         });
 
         startTurnTimer(game);

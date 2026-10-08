@@ -120,6 +120,22 @@
         .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; text-align: left; position: relative; color: #333; }
         .close-modal { position: absolute; top: 15px; right: 20px; font-size: 25px; font-weight: bold; cursor: pointer; color: #999; }
 
+
+        /* --- HISTORIQUE DES MOTS --- */
+        #history-panel { margin-top: 25px; text-align: left; background: #f8f9fc; border: 2px solid #e6e9f5; border-radius: 16px; padding: 15px 18px; }
+        #history-panel h3 { margin: 0 0 10px 0; font-size: 1.1em; text-align: center; }
+        #history-list { max-height: 280px; overflow-y: auto; padding-right: 5px; }
+        .history-round { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #d6daea; }
+        .history-round:last-child { border-bottom: none; margin-bottom: 0; }
+        .history-round-title { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-bottom: 6px; }
+        .history-round.current .history-round-title { color: var(--primary-color); }
+        .history-line { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 1em; animation: slideUpFade 0.3s ease-out; }
+        .history-line img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: #eee; flex-shrink: 0; }
+        .history-word { font-weight: 700; color: var(--primary-color); }
+        .history-silent { font-style: italic; color: #999; }
+        .history-empty { color: #aaa; font-style: italic; font-size: 0.9em; }
+        #order-info { font-size: 0.9em; color: #777; margin: 0 0 5px 0; }
+
         .rule-item { margin-bottom: 15px; }
         .rule-role { font-weight: bold; color: var(--primary-color); }
     </style>
@@ -196,6 +212,7 @@
                 <h2 id="role-display">Ton mot : ???</h2>
             </div>
             
+            <p id="order-info" class="hidden"></p>
             <p id="turn-info">Préparation...</p>
 
             <div id="word-input-area" class="hidden">
@@ -229,6 +246,11 @@
                 <div id="candidates-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;"></div>
             </div>
             <p id="vote-confirmation" class="hidden" style="color: var(--secondary-color); font-weight: bold; font-size: 1.2em;">✅ Vote enregistré !</p>
+        </div>
+
+        <div id="history-panel" class="hidden">
+            <h3>📜 Historique des indices</h3>
+            <div id="history-list"></div>
         </div>
 
         <div id="white-guess-screen" class="screen-container hidden">
